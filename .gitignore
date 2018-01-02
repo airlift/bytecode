@@ -1,0 +1,7 @@
+*.iml
+.idea
+target/
+test-output/
+pom.xml.versionsBackup
+.*.swp
+.*.swo
