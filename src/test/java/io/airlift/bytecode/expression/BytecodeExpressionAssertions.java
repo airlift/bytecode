@@ -25,6 +25,7 @@ import io.airlift.bytecode.SmartClassWriter;
 import org.objectweb.asm.ClassWriter;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import static io.airlift.bytecode.Access.FINAL;
@@ -38,7 +39,7 @@ import static org.testng.Assert.assertEquals;
 
 public final class BytecodeExpressionAssertions
 {
-    private static final boolean DUMP_BYTECODE_TREE = false;
+    public static final AtomicBoolean DUMP_BYTECODE_TREE = new AtomicBoolean();
 
     private BytecodeExpressionAssertions() {}
 
@@ -109,8 +110,9 @@ public final class BytecodeExpressionAssertions
         BytecodeNode node = nodeGenerator.apply(method.getScope());
         method.getBody().append(node);
 
-        if (DUMP_BYTECODE_TREE) {
-            System.out.println(dumpBytecodeTree(classDefinition));
+        String tree = dumpBytecodeTree(classDefinition);
+        if (DUMP_BYTECODE_TREE.get()) {
+            System.out.println(tree);
         }
 
         DynamicClassLoader classLoader = new DynamicClassLoader(parentClassLoader.orElse(BytecodeExpressionAssertions.class.getClassLoader()));
