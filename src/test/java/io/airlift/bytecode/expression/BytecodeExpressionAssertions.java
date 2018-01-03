@@ -13,16 +13,11 @@
  */
 package io.airlift.bytecode.expression;
 
-import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.ClassDefinition;
-import io.airlift.bytecode.ClassInfoLoader;
-import io.airlift.bytecode.DynamicClassLoader;
 import io.airlift.bytecode.MethodDefinition;
 import io.airlift.bytecode.ParameterizedType;
 import io.airlift.bytecode.Scope;
-import io.airlift.bytecode.SmartClassWriter;
-import org.objectweb.asm.ClassWriter;
 
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,6 +29,7 @@ import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.a;
 import static io.airlift.bytecode.BytecodeUtils.dumpBytecodeTree;
 import static io.airlift.bytecode.BytecodeUtils.uniqueClassName;
+import static io.airlift.bytecode.ClassGenerator.classGenerator;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static org.testng.Assert.assertEquals;
 
@@ -115,11 +111,11 @@ public final class BytecodeExpressionAssertions
             System.out.println(tree);
         }
 
-        DynamicClassLoader classLoader = new DynamicClassLoader(parentClassLoader.orElse(BytecodeExpressionAssertions.class.getClassLoader()));
-        ClassWriter cw = new SmartClassWriter(ClassInfoLoader.createClassInfoLoader(ImmutableList.of(classDefinition), classLoader));
-        classDefinition.visit(cw);
+        ClassLoader classLoader = parentClassLoader.orElse(BytecodeExpressionAssertions.class.getClassLoader());
 
-        Class<?> clazz = classLoader.defineClass(classDefinition.getType().getJavaClassName(), cw.toByteArray());
-        return clazz.getMethod("test").invoke(null);
+        return classGenerator(classLoader)
+                .defineClass(classDefinition, Object.class)
+                .getMethod("test")
+                .invoke(null);
     }
 }

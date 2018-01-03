@@ -28,7 +28,7 @@ import static io.airlift.bytecode.Access.FINAL;
 import static io.airlift.bytecode.Access.PUBLIC;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.a;
-import static io.airlift.bytecode.BytecodeUtils.defineClass;
+import static io.airlift.bytecode.ClassGenerator.classGenerator;
 import static io.airlift.bytecode.Parameter.arg;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assertBytecodeExpression;
@@ -58,7 +58,8 @@ public class TestArrayBytecodeExpressions
             MethodDefinition methodDefinition = defineSetAndGetMethod(aClass);
             typeMethodMap.put(aClass, methodDefinition);
         }
-        defineClass(classDefinition, Object.class, classLoader);
+
+        classGenerator(classLoader).defineClass(classDefinition, Object.class);
     }
 
     @Test
