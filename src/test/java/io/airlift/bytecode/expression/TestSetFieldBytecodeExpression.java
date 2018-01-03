@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode.expression;
 
-import com.google.common.base.Throwables;
 import io.airlift.bytecode.BytecodeBlock;
 import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.Scope;
@@ -86,7 +85,7 @@ public class TestSetFieldBytecodeExpression
             return clazz.getField(name);
         }
         catch (NoSuchFieldException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 }
