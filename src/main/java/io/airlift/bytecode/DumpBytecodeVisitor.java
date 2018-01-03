@@ -45,7 +45,8 @@ import io.airlift.bytecode.instruction.VariableInstruction.IncrementVariableInst
 import io.airlift.bytecode.instruction.VariableInstruction.LoadVariableInstruction;
 import io.airlift.bytecode.instruction.VariableInstruction.StoreVariableInstruction;
 
-import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -56,12 +57,12 @@ import static io.airlift.bytecode.ParameterizedType.type;
 public class DumpBytecodeVisitor
         extends BytecodeVisitor<Void>
 {
-    private final PrintStream out;
+    private final PrintWriter out;
     private int indentLevel;
 
-    public DumpBytecodeVisitor(PrintStream out)
+    public DumpBytecodeVisitor(Writer out)
     {
-        this.out = out;
+        this.out = new PrintWriter(out);
     }
 
     @Override

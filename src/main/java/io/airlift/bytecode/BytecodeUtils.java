@@ -25,14 +25,11 @@ import org.objectweb.asm.util.Printer;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceClassVisitor;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandle;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +44,6 @@ public final class BytecodeUtils
     private static final Logger log = Logger.get(BytecodeUtils.class);
 
     private static final boolean ADD_FAKE_LINE_NUMBER = false;
-    private static final boolean DUMP_BYTECODE_TREE = false;
     private static final boolean DUMP_BYTECODE_RAW = false;
     private static final boolean RUN_ASM_VERIFIER = false; // verifier doesn't work right now
     private static final AtomicReference<String> DUMP_CLASS_FILES_TO = new AtomicReference<>();
@@ -68,6 +64,13 @@ public final class BytecodeUtils
                 .replaceFrom(className, '_');
     }
 
+    public static String dumpBytecodeTree(ClassDefinition classDefinition)
+    {
+        StringWriter writer = new StringWriter();
+        new DumpBytecodeVisitor(writer).visitClass(classDefinition);
+        return writer.toString();
+    }
+
     public static <T> Class<? extends T> defineClass(ClassDefinition classDefinition, Class<T> superType, DynamicClassLoader classLoader)
     {
         log.debug("Defining class: %s", classDefinition.getName());
@@ -84,15 +87,6 @@ public final class BytecodeUtils
     private static Map<String, Class<?>> defineClasses(List<ClassDefinition> classDefinitions, DynamicClassLoader classLoader)
     {
         ClassInfoLoader classInfoLoader = createClassInfoLoader(classDefinitions, classLoader);
-
-        if (DUMP_BYTECODE_TREE) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            DumpBytecodeVisitor dumpBytecode = new DumpBytecodeVisitor(new PrintStream(out));
-            for (ClassDefinition classDefinition : classDefinitions) {
-                dumpBytecode.visitClass(classDefinition);
-            }
-            System.out.println(new String(out.toByteArray(), StandardCharsets.UTF_8));
-        }
 
         Map<String, byte[]> bytecodes = new LinkedHashMap<>();
         for (ClassDefinition classDefinition : classDefinitions) {

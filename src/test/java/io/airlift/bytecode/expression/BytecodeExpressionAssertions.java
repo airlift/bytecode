@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.ClassDefinition;
 import io.airlift.bytecode.ClassInfoLoader;
-import io.airlift.bytecode.DumpBytecodeVisitor;
 import io.airlift.bytecode.DynamicClassLoader;
 import io.airlift.bytecode.MethodDefinition;
 import io.airlift.bytecode.ParameterizedType;
@@ -32,6 +31,7 @@ import static io.airlift.bytecode.Access.FINAL;
 import static io.airlift.bytecode.Access.PUBLIC;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.a;
+import static io.airlift.bytecode.BytecodeUtils.dumpBytecodeTree;
 import static io.airlift.bytecode.BytecodeUtils.uniqueClassName;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static org.testng.Assert.assertEquals;
@@ -110,8 +110,7 @@ public final class BytecodeExpressionAssertions
         method.getBody().append(node);
 
         if (DUMP_BYTECODE_TREE) {
-            DumpBytecodeVisitor dumpBytecode = new DumpBytecodeVisitor(System.out);
-            dumpBytecode.visitClass(classDefinition);
+            System.out.println(dumpBytecodeTree(classDefinition));
         }
 
         DynamicClassLoader classLoader = new DynamicClassLoader(parentClassLoader.orElse(BytecodeExpressionAssertions.class.getClassLoader()));
