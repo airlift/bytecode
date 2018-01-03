@@ -13,6 +13,7 @@
  */
 package io.airlift.bytecode;
 
+import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.reflect.Reflection;
@@ -63,8 +64,8 @@ public final class BytecodeUtils
     public static String toJavaIdentifierString(String className)
     {
         // replace invalid characters with '_'
-        int[] codePoints = className.codePoints().map(c -> Character.isJavaIdentifierPart(c) ? c : '_').toArray();
-        return new String(codePoints, 0, codePoints.length);
+        return CharMatcher.forPredicate(Character::isJavaIdentifierPart).negate()
+                .replaceFrom(className, '_');
     }
 
     public static <T> Class<? extends T> defineClass(ClassDefinition classDefinition, Class<T> superType, DynamicClassLoader classLoader)
