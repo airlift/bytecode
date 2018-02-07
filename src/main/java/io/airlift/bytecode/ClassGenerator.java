@@ -47,6 +47,7 @@ public class ClassGenerator
     private final DynamicClassLoader classLoader;
     private final boolean fakeLineNumbers;
     private final boolean runAsmVerifier;
+    private final boolean dumpTreeBytecode;
     private final boolean dumpRawBytecode;
     private final Writer output;
     private final Optional<Path> dumpClassPath;
@@ -63,13 +64,14 @@ public class ClassGenerator
 
     public static ClassGenerator classGenerator(DynamicClassLoader classLoader)
     {
-        return new ClassGenerator(classLoader, false, false, false, nullWriter(), Optional.empty());
+        return new ClassGenerator(classLoader, false, false, false, false, nullWriter(), Optional.empty());
     }
 
     private ClassGenerator(
             DynamicClassLoader classLoader,
             boolean fakeLineNumbers,
             boolean runAsmVerifier,
+            boolean dumpTreeBytecode,
             boolean dumpRawBytecode,
             Writer output,
             Optional<Path> dumpClassPath)
@@ -77,6 +79,7 @@ public class ClassGenerator
         this.classLoader = requireNonNull(classLoader, "classLoader is null");
         this.fakeLineNumbers = fakeLineNumbers;
         this.runAsmVerifier = runAsmVerifier;
+        this.dumpTreeBytecode = dumpTreeBytecode;
         this.dumpRawBytecode = dumpRawBytecode;
         this.output = requireNonNull(output, "output is null");
         this.dumpClassPath = requireNonNull(dumpClassPath, "dumpClassPath is null");
@@ -84,22 +87,27 @@ public class ClassGenerator
 
     public ClassGenerator fakeLineNumbers(boolean fakeLineNumbers)
     {
-        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
+        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpTreeBytecode, dumpRawBytecode, output, dumpClassPath);
     }
 
     public ClassGenerator runAsmVerifier(boolean runAsmVerifier)
     {
-        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
+        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpTreeBytecode, dumpRawBytecode, output, dumpClassPath);
+    }
+
+    public ClassGenerator dumpTreeBytecode(boolean dumpTreeBytecode)
+    {
+        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpTreeBytecode, dumpRawBytecode, output, dumpClassPath);
     }
 
     public ClassGenerator dumpRawBytecode(boolean dumpRawBytecode)
     {
-        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
+        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpTreeBytecode, dumpRawBytecode, output, dumpClassPath);
     }
 
     public ClassGenerator outputTo(Writer output)
     {
-        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
+        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpTreeBytecode, dumpRawBytecode, output, dumpClassPath);
     }
 
     public ClassGenerator dumpClassFilesTo(Path dumpClassPath)
@@ -109,7 +117,7 @@ public class ClassGenerator
 
     public ClassGenerator dumpClassFilesTo(Optional<Path> dumpClassPath)
     {
-        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpRawBytecode, output, dumpClassPath);
+        return new ClassGenerator(classLoader, fakeLineNumbers, runAsmVerifier, dumpTreeBytecode, dumpRawBytecode, output, dumpClassPath);
     }
 
     public <T> Class<? extends T> defineClass(ClassDefinition classDefinition, Class<T> superType)
@@ -121,6 +129,14 @@ public class ClassGenerator
     public Map<String, Class<?>> defineClasses(List<ClassDefinition> classDefinitions)
     {
         ClassInfoLoader classInfoLoader = createClassInfoLoader(classDefinitions, classLoader);
+
+        if (dumpTreeBytecode) {
+            DumpBytecodeVisitor dumpBytecode = new DumpBytecodeVisitor(new PrintWriter(output));
+            for (ClassDefinition classDefinition : classDefinitions) {
+                dumpBytecode.visitClass(classDefinition);
+            }
+        }
+
         Map<String, byte[]> bytecodes = new LinkedHashMap<>();
 
         for (ClassDefinition classDefinition : classDefinitions) {
