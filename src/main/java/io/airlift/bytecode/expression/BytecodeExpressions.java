@@ -598,6 +598,20 @@ public final class BytecodeExpressions
     }
 
     //
+    // Null comparison operations
+    //
+
+    public static BytecodeExpression isNull(BytecodeExpression value)
+    {
+        return equal(value, constantNull(value.getType()));
+    }
+
+    public static BytecodeExpression isNotNull(BytecodeExpression value)
+    {
+        return notEqual(value, constantNull(value.getType()));
+    }
+
+    //
     // Logical binary operations
     //
 
