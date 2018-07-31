@@ -20,7 +20,7 @@
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
 
-        <dep.asm.version>6.1.1</dep.asm.version>
+        <dep.asm.version>6.2.1</dep.asm.version>
     </properties>
 
     <dependencies>
