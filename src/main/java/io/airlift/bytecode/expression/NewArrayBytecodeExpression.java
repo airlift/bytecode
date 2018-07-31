@@ -61,11 +61,6 @@ class NewArrayBytecodeExpression
         checkArgument(type.getArrayComponentType() != null, "type %s must be array type", type);
         requireNonNull(elements, "elements is null");
         this.elementType = type.getArrayComponentType();
-        for (int i = 0; i < elements.size(); i++) {
-            BytecodeExpression element = elements.get(i);
-            ParameterizedType elementType = element.getType();
-            checkArgument(elementType.equals(this.elementType), "element %s must be %s type, but is %s", i, this.elementType, elementType);
-        }
         this.length = constantInt(elements.size());
         this.elements = elements;
     }
