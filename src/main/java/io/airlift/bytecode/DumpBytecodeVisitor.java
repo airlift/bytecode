@@ -19,7 +19,7 @@ import io.airlift.bytecode.control.CaseStatement;
 import io.airlift.bytecode.control.DoWhileLoop;
 import io.airlift.bytecode.control.ForLoop;
 import io.airlift.bytecode.control.IfStatement;
-import io.airlift.bytecode.control.LookupSwitch;
+import io.airlift.bytecode.control.SwitchStatement;
 import io.airlift.bytecode.control.TryCatch;
 import io.airlift.bytecode.control.WhileLoop;
 import io.airlift.bytecode.debug.LineNumberNode;
@@ -53,6 +53,7 @@ import java.util.List;
 
 import static io.airlift.bytecode.Access.INTERFACE;
 import static io.airlift.bytecode.ParameterizedType.type;
+import static java.lang.String.format;
 
 public class DumpBytecodeVisitor
         extends BytecodeVisitor<Void>
@@ -391,18 +392,21 @@ public class DumpBytecodeVisitor
     }
 
     @Override
-    public Void visitLookupSwitch(BytecodeNode parent, LookupSwitch lookupSwitch)
+    public Void visitSwitch(BytecodeNode parent, SwitchStatement switchStatement)
     {
-        if (lookupSwitch.getComment() != null) {
+        if (switchStatement.getComment() != null) {
             printLine();
-            printLine("// %s", lookupSwitch.getComment());
+            printLine("// %s", switchStatement.getComment());
         }
         printLine("switch {");
         indentLevel++;
-        for (CaseStatement caseStatement : lookupSwitch.getCases()) {
-            printLine("case %s: goto %s", caseStatement.getKey(), caseStatement.getLabel().getName());
+        visitNestedNode("expression", switchStatement.expression(), switchStatement);
+        for (CaseStatement caseStatement : switchStatement.cases()) {
+            visitNestedNode(format("case %s:", caseStatement.getKey()), caseStatement.getBody(), switchStatement);
         }
-        printLine("default: goto %s", lookupSwitch.getDefaultCase().getName());
+        if (switchStatement.getDefaultBody() != null) {
+            visitNestedNode("default:", switchStatement.getDefaultBody(), switchStatement);
+        }
         indentLevel--;
         printLine("}");
         return null;
@@ -531,19 +535,19 @@ public class DumpBytecodeVisitor
 
     public void printLine(String line)
     {
-        out.println(String.format("%s%s", indent(indentLevel), line));
+        out.println(format("%s%s", indent(indentLevel), line));
     }
 
     public void printLine(String format, Object... args)
     {
-        String line = String.format(format, args);
-        out.println(String.format("%s%s", indent(indentLevel), line));
+        String line = format(format, args);
+        out.println(format("%s%s", indent(indentLevel), line));
     }
 
     public void printWords(String... words)
     {
         String line = Joiner.on(" ").join(words);
-        out.println(String.format("%s%s", indent(indentLevel), line));
+        out.println(format("%s%s", indent(indentLevel), line));
     }
 
     private String indent(int level)

@@ -17,7 +17,7 @@ import io.airlift.bytecode.control.DoWhileLoop;
 import io.airlift.bytecode.control.FlowControl;
 import io.airlift.bytecode.control.ForLoop;
 import io.airlift.bytecode.control.IfStatement;
-import io.airlift.bytecode.control.LookupSwitch;
+import io.airlift.bytecode.control.SwitchStatement;
 import io.airlift.bytecode.control.TryCatch;
 import io.airlift.bytecode.control.WhileLoop;
 import io.airlift.bytecode.debug.DebugNode;
@@ -156,9 +156,9 @@ public class BytecodeVisitor<T>
         return visitFlowControl(parent, doWhileLoop);
     }
 
-    public T visitLookupSwitch(BytecodeNode parent, LookupSwitch lookupSwitch)
+    public T visitSwitch(BytecodeNode parent, SwitchStatement switchStatement)
     {
-        return visitFlowControl(parent, lookupSwitch);
+        return visitFlowControl(parent, switchStatement);
     }
 
     //
