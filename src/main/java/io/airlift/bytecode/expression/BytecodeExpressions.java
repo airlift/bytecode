@@ -292,6 +292,11 @@ public final class BytecodeExpressions
         return new NewArrayBytecodeExpression(type, length);
     }
 
+    public static BytecodeExpression newArray(ParameterizedType type, BytecodeExpression... elements)
+    {
+        return new NewArrayBytecodeExpression(type, ImmutableList.copyOf(elements));
+    }
+
     public static BytecodeExpression newArray(ParameterizedType type, Iterable<? extends BytecodeExpression> elements)
     {
         return new NewArrayBytecodeExpression(type, ImmutableList.copyOf(elements));
