@@ -24,6 +24,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.transform;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.ArithmeticBytecodeExpression.createArithmeticBytecodeExpression;
@@ -35,6 +36,7 @@ import static io.airlift.bytecode.instruction.Constant.loadInt;
 import static io.airlift.bytecode.instruction.Constant.loadLong;
 import static io.airlift.bytecode.instruction.Constant.loadNull;
 import static io.airlift.bytecode.instruction.Constant.loadString;
+import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 public final class BytecodeExpressions
@@ -300,7 +302,12 @@ public final class BytecodeExpressions
 
     public static BytecodeExpression invokeStatic(MethodDefinition method, BytecodeExpression... parameters)
     {
-        return invokeStatic(method.getDeclaringClass().getType(), method.getName(), method.getReturnType(), ImmutableList.copyOf(parameters));
+        return invokeStatic(
+                method.getDeclaringClass().getType(),
+                method.getName(),
+                method.getReturnType(),
+                method.getParameterTypes(),
+                ImmutableList.copyOf(parameters));
     }
 
     public static BytecodeExpression invokeStatic(Method method, BytecodeExpression... parameters)
@@ -310,7 +317,14 @@ public final class BytecodeExpressions
 
     public static BytecodeExpression invokeStatic(Method method, Iterable<? extends BytecodeExpression> parameters)
     {
-        return invokeStatic(method.getDeclaringClass(), method.getName(), method.getReturnType(), parameters);
+        return invokeStatic(
+                type(method.getDeclaringClass()),
+                method.getName(),
+                type(method.getReturnType()),
+                stream(method.getParameterTypes())
+                        .map(ParameterizedType::type)
+                        .collect(toImmutableList()),
+                parameters);
     }
 
     public static BytecodeExpression invokeStatic(Class<?> methodTargetType, String methodName, Class<?> returnType, BytecodeExpression... parameters)

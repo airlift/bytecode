@@ -27,9 +27,11 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.transform;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantInt;
+import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -130,12 +132,18 @@ public abstract class BytecodeExpression
     {
         List<BytecodeExpression> params = ImmutableList.copyOf(parameters);
         checkArgument(method.getParameters().size() == params.size(), "Expected %s params found %s", method.getParameters().size(), params.size());
-        return invoke(method.getName(), method.getReturnType(), parameters);
+        return invoke(method.getName(), method.getReturnType(), method.getParameterTypes(), parameters);
     }
 
     public final BytecodeExpression invoke(Method method, Iterable<? extends BytecodeExpression> parameters)
     {
-        return invoke(method.getName(), type(method.getReturnType()), parameters);
+        return invoke(
+                method.getName(),
+                type(method.getReturnType()),
+                stream(method.getParameterTypes())
+                        .map(ParameterizedType::type)
+                        .collect(toImmutableList()),
+                parameters);
     }
 
     public final BytecodeExpression invoke(String methodName, Class<?> returnType, BytecodeExpression... parameters)
