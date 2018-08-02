@@ -20,6 +20,7 @@ import io.airlift.bytecode.OpCode;
 import io.airlift.bytecode.ParameterizedType;
 
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
@@ -217,6 +218,21 @@ public final class BytecodeExpressions
     //
     // New instance
     //
+
+    public static BytecodeExpression newInstance(Constructor<?> constructor, BytecodeExpression... parameters)
+    {
+        return newInstance(constructor, ImmutableList.copyOf(parameters));
+    }
+
+    public static BytecodeExpression newInstance(Constructor<?> constructor, Iterable<? extends BytecodeExpression> parameters)
+    {
+        return newInstance(
+                type(constructor.getDeclaringClass()),
+                stream(constructor.getParameterTypes())
+                        .map(ParameterizedType::type)
+                        .collect(toImmutableList()),
+                parameters);
+    }
 
     public static BytecodeExpression newInstance(Class<?> returnType, BytecodeExpression... parameters)
     {
