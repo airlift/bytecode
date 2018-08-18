@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>bytecode</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1</version>
 
     <description>High-level library for generating JVM bytecode</description>
     <url>https://github.com/airlift/bytecode</url>
@@ -89,4 +89,8 @@
             </plugin>
         </plugins>
     </build>
+
+  <scm>
+    <tag>1.1</tag>
+  </scm>
 </project>
