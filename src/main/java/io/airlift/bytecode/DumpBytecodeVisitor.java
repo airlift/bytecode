@@ -21,6 +21,7 @@ import io.airlift.bytecode.control.ForLoop;
 import io.airlift.bytecode.control.IfStatement;
 import io.airlift.bytecode.control.SwitchStatement;
 import io.airlift.bytecode.control.TryCatch;
+import io.airlift.bytecode.control.TryCatch.CatchBlock;
 import io.airlift.bytecode.control.WhileLoop;
 import io.airlift.bytecode.debug.LineNumberNode;
 import io.airlift.bytecode.expression.BytecodeExpression;
@@ -54,6 +55,7 @@ import java.util.List;
 import static io.airlift.bytecode.Access.INTERFACE;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 
 public class DumpBytecodeVisitor
         extends BytecodeVisitor<Void>
@@ -311,11 +313,15 @@ public class DumpBytecodeVisitor
         indentLevel--;
         printLine("}");
 
-        printLine("catch (%s) {", tryCatch.getExceptionName());
-        indentLevel++;
-        tryCatch.getCatchNode().accept(tryCatch, this);
-        indentLevel--;
-        printLine("}");
+        for (CatchBlock catchBlock : tryCatch.getCatchBlocks()) {
+            printLine("catch (%s) {", catchBlock.getExceptionTypes().stream()
+                    .map(ParameterizedType::getJavaClassName)
+                    .collect(joining(" | ")));
+            indentLevel++;
+            catchBlock.getHandler().accept(tryCatch, this);
+            indentLevel--;
+            printLine("}");
+        }
 
         return null;
     }
