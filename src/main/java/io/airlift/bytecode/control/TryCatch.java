@@ -22,8 +22,11 @@ import io.airlift.bytecode.ParameterizedType;
 import io.airlift.bytecode.instruction.LabelNode;
 import org.objectweb.asm.MethodVisitor;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 public class TryCatch
@@ -31,20 +34,18 @@ public class TryCatch
 {
     private final String comment;
     private final BytecodeNode tryNode;
-    private final BytecodeNode catchNode;
-    private final String exceptionName;
+    private final List<CatchBlock> catchBlocks;
 
-    public TryCatch(BytecodeNode tryNode, BytecodeNode catchNode, ParameterizedType exceptionType)
+    public TryCatch(BytecodeNode tryNode, List<CatchBlock> catchBlocks)
     {
-        this(null, tryNode, catchNode, exceptionType);
+        this(null, tryNode, catchBlocks);
     }
 
-    public TryCatch(String comment, BytecodeNode tryNode, BytecodeNode catchNode, ParameterizedType exceptionType)
+    public TryCatch(String comment, BytecodeNode tryNode, List<CatchBlock> catchBlocks)
     {
         this.comment = comment;
         this.tryNode = requireNonNull(tryNode, "tryNode is null");
-        this.catchNode = requireNonNull(catchNode, "catchNode is null");
-        this.exceptionName = (exceptionType != null) ? exceptionType.getClassName() : null;
+        this.catchBlocks = ImmutableList.copyOf(requireNonNull(catchBlocks, "catchBlocks is null"));
     }
 
     @Override
@@ -58,14 +59,9 @@ public class TryCatch
         return tryNode;
     }
 
-    public BytecodeNode getCatchNode()
+    public List<CatchBlock> getCatchBlocks()
     {
-        return catchNode;
-    }
-
-    public String getExceptionName()
-    {
-        return exceptionName;
+        return catchBlocks;
     }
 
     @Override
@@ -73,7 +69,7 @@ public class TryCatch
     {
         LabelNode tryStart = new LabelNode("tryStart");
         LabelNode tryEnd = new LabelNode("tryEnd");
-        LabelNode handler = new LabelNode("handler");
+        List<LabelNode> handlers = new ArrayList<>();
         LabelNode done = new LabelNode("done");
 
         BytecodeBlock block = new BytecodeBlock();
@@ -84,26 +80,75 @@ public class TryCatch
                 .visitLabel(tryEnd)
                 .gotoLabel(done);
 
-        // handler block
-        block.visitLabel(handler)
-                .append(catchNode);
+        // catch blocks
+        for (int i = 0; i < catchBlocks.size(); i++) {
+            BytecodeNode handlerBlock = catchBlocks.get(i).getHandler();
+            LabelNode handler = new LabelNode("handler" + i);
+            handlers.add(handler);
+            block.visitLabel(handler)
+                    .append(handlerBlock);
+        }
 
         // all done
         block.visitLabel(done);
 
         block.accept(visitor, generationContext);
-        visitor.visitTryCatchBlock(tryStart.getLabel(), tryEnd.getLabel(), handler.getLabel(), exceptionName);
+
+        // exception table
+        for (int i = 0; i < catchBlocks.size(); i++) {
+            LabelNode handler = handlers.get(i);
+            List<ParameterizedType> exceptionTypes = catchBlocks.get(i).getExceptionTypes();
+            for (ParameterizedType type : exceptionTypes) {
+                visitor.visitTryCatchBlock(
+                        tryStart.getLabel(),
+                        tryEnd.getLabel(),
+                        handler.getLabel(),
+                        type.getClassName());
+            }
+            if (exceptionTypes.isEmpty()) {
+                visitor.visitTryCatchBlock(
+                        tryStart.getLabel(),
+                        tryEnd.getLabel(),
+                        handler.getLabel(),
+                        null);
+            }
+        }
     }
 
     @Override
     public List<BytecodeNode> getChildNodes()
     {
-        return ImmutableList.of(tryNode, catchNode);
+        return Stream.concat(
+                Stream.of(tryNode),
+                catchBlocks.stream().map(CatchBlock::getHandler))
+                .collect(toImmutableList());
     }
 
     @Override
     public <T> T accept(BytecodeNode parent, BytecodeVisitor<T> visitor)
     {
         return visitor.visitTryCatch(parent, this);
+    }
+
+    public static class CatchBlock
+    {
+        private final BytecodeNode handler;
+        private final List<ParameterizedType> exceptionTypes;
+
+        public CatchBlock(BytecodeNode handler, List<ParameterizedType> exceptionTypes)
+        {
+            this.handler = requireNonNull(handler, "handler is null");
+            this.exceptionTypes = ImmutableList.copyOf(requireNonNull(exceptionTypes, "exceptionTypes is null"));
+        }
+
+        public BytecodeNode getHandler()
+        {
+            return handler;
+        }
+
+        public List<ParameterizedType> getExceptionTypes()
+        {
+            return exceptionTypes;
+        }
     }
 }
