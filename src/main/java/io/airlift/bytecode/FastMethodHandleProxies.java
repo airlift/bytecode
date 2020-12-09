@@ -55,14 +55,34 @@ public final class FastMethodHandleProxies
 
     /**
      * Faster version of {@link MethodHandleProxies#asInterfaceInstance(Class, MethodHandle)}.
+     *
+     * @param <T> the desired type of the wrapper, a single-method interface
+     * @param type a class object representing {@code T}
+     * @param target the method handle to invoke from the wrapper
+     * @return a correctly-typed wrapper for the given target
      */
     public static <T> T asInterfaceInstance(Class<T> type, MethodHandle target)
+    {
+        String className = "$gen." + type.getName() + "_" + CLASS_ID.incrementAndGet();
+        return asInterfaceInstance(className, type, target);
+    }
+
+    /**
+     * Faster version of {@link MethodHandleProxies#asInterfaceInstance(Class, MethodHandle)}.
+     *
+     * @param <T> the desired type of the wrapper, a single-method interface
+     * @param className the name of the generated class
+     * @param type a class object representing {@code T}
+     * @param target the method handle to invoke from the wrapper
+     * @return a correctly-typed wrapper for the given target
+     */
+    public static <T> T asInterfaceInstance(String className, Class<T> type, MethodHandle target)
     {
         checkArgument(type.isInterface() && Modifier.isPublic(type.getModifiers()), "not a public interface: %s", type.getName());
 
         ClassDefinition classDefinition = new ClassDefinition(
                 a(PUBLIC, FINAL, SYNTHETIC),
-                typeFromJavaClassName("$gen." + type.getName() + "_" + CLASS_ID.incrementAndGet()),
+                typeFromJavaClassName(className),
                 type(Object.class),
                 type(type));
 
