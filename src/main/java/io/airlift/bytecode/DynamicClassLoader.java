@@ -128,8 +128,15 @@ public class DynamicClassLoader
                 }
             }
 
-            Class<?> clazz = getParent().loadClass(name);
-            return resolveClass(clazz, resolve);
+            // try parent if present
+            ClassLoader parent = getParent();
+            if (parent != null) {
+                Class<?> clazz = parent.loadClass(name);
+                return resolveClass(clazz, resolve);
+            }
+
+            // try bootstrap class loader
+            return super.loadClass(name, resolve);
         }
     }
 
