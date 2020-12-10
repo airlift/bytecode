@@ -89,32 +89,49 @@ public final class FastMethodHandleProxies
         classDefinition.declareDefaultConstructor(a(PUBLIC));
 
         Method method = getSingleAbstractMethod(type);
-        Class<?>[] parameterTypes = method.getParameterTypes();
-        MethodHandle adaptedTarget = target.asType(methodType(method.getReturnType(), parameterTypes));
+        target = target.asType(methodType(method.getReturnType(), method.getParameterTypes()));
 
+        defineProxyMethod(classDefinition, method);
+
+        // note this will not work if interface class is not visible from this class loader,
+        // but we must use this class loader to ensure the bootstrap method is visible
+        ClassLoader targetClassLoader = FastMethodHandleProxies.class.getClassLoader();
+        DynamicClassLoader dynamicClassLoader = new DynamicClassLoader(targetClassLoader, ImmutableMap.of(0L, target));
+        Class<? extends T> newClass = classGenerator(dynamicClassLoader).defineClass(classDefinition, type);
+        try {
+            return newClass.getDeclaredConstructor().newInstance();
+        }
+        catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void defineProxyMethod(ClassDefinition classDefinition, Method target)
+    {
         List<Parameter> parameters = new ArrayList<>();
+        Class<?>[] parameterTypes = target.getParameterTypes();
         for (int i = 0; i < parameterTypes.length; i++) {
             parameters.add(arg("arg" + i, parameterTypes[i]));
         }
 
-        MethodDefinition methodDefinition = classDefinition.declareMethod(
+        MethodDefinition method = classDefinition.declareMethod(
                 a(PUBLIC),
-                method.getName(),
-                type(method.getReturnType()),
+                target.getName(),
+                type(target.getReturnType()),
                 parameters);
 
         BytecodeNode invocation = invokeDynamic(
                 BOOTSTRAP_METHOD,
                 ImmutableList.of(),
-                method.getName(),
-                method.getReturnType(),
+                target.getName(),
+                target.getReturnType(),
                 parameters)
                 .ret();
 
         ImmutableList.Builder<ParameterizedType> exceptionTypes = ImmutableList.builder();
         exceptionTypes.add(type(RuntimeException.class), type(Error.class));
-        for (Class<?> exceptionType : method.getExceptionTypes()) {
-            methodDefinition.addException(exceptionType.asSubclass(Throwable.class));
+        for (Class<?> exceptionType : target.getExceptionTypes()) {
+            method.addException(exceptionType.asSubclass(Throwable.class));
             exceptionTypes.add(type(exceptionType));
         }
 
@@ -129,19 +146,7 @@ public final class FastMethodHandleProxies
                 new CatchBlock(new BytecodeBlock().throwObject(), exceptionTypes.build()),
                 new CatchBlock(throwUndeclared, ImmutableList.of())));
 
-        methodDefinition.getBody().append(invocation);
-
-        // note this will not work if interface class is not visible from this class loader,
-        // but we must use this class loader to ensure the bootstrap method is visible
-        ClassLoader targetClassLoader = FastMethodHandleProxies.class.getClassLoader();
-        DynamicClassLoader dynamicClassLoader = new DynamicClassLoader(targetClassLoader, ImmutableMap.of(0L, adaptedTarget));
-        Class<? extends T> newClass = classGenerator(dynamicClassLoader).defineClass(classDefinition, type);
-        try {
-            return newClass.getDeclaredConstructor().newInstance();
-        }
-        catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
+        method.getBody().append(invocation);
     }
 
     private static <T> Method getSingleAbstractMethod(Class<T> type)
