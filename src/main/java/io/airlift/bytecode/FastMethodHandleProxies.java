@@ -17,12 +17,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.bytecode.control.TryCatch;
 import io.airlift.bytecode.control.TryCatch.CatchBlock;
+import io.airlift.bytecode.expression.BytecodeExpression;
+import io.airlift.bytecode.instruction.InvokeInstruction.BootstrapMethod;
 
 import java.lang.invoke.CallSite;
 import java.lang.invoke.ConstantCallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleProxies;
-import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -30,26 +32,57 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.airlift.bytecode.Access.FINAL;
 import static io.airlift.bytecode.Access.PUBLIC;
+import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.SYNTHETIC;
 import static io.airlift.bytecode.Access.a;
 import static io.airlift.bytecode.BytecodeUtils.uniqueClassName;
 import static io.airlift.bytecode.ClassGenerator.classGenerator;
-import static io.airlift.bytecode.FastMethodHandleProxies.Bootstrap.BOOTSTRAP_METHOD;
 import static io.airlift.bytecode.Parameter.arg;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.ParameterizedType.typeFromJavaClassName;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantClass;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantLong;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantString;
 import static io.airlift.bytecode.expression.BytecodeExpressions.invokeDynamic;
+import static io.airlift.bytecode.expression.BytecodeExpressions.invokeStatic;
+import static io.airlift.bytecode.expression.BytecodeExpressions.newArray;
+import static io.airlift.bytecode.expression.BytecodeExpressions.newInstance;
 import static java.lang.invoke.MethodType.methodType;
 import static java.util.Arrays.stream;
 
 public final class FastMethodHandleProxies
 {
     private static final String BASE_PACKAGE = FastMethodHandleProxies.class.getPackage().getName() + ".proxy";
+
+    private static final Method LOOKUP_FIND_VIRTUAL;
+    private static final Method LOOKUP_LOOKUP_CLASS;
+    private static final Method CLASS_GET_CLASSLOADER;
+    private static final Method CLASSLOADER_GET_CLASS;
+    private static final Method METHODTYPE;
+    private static final Method METHODHANDLE_INVOKE;
+    private static final Method MAP_GET;
+
+    static {
+        try {
+            LOOKUP_FIND_VIRTUAL = Lookup.class.getMethod("findVirtual", Class.class, String.class, MethodType.class);
+            LOOKUP_LOOKUP_CLASS = Lookup.class.getMethod("lookupClass");
+            CLASS_GET_CLASSLOADER = Class.class.getMethod("getClassLoader");
+            CLASSLOADER_GET_CLASS = ClassLoader.class.getMethod("getClass");
+            METHODTYPE = MethodType.class.getMethod("methodType", Class.class);
+            METHODHANDLE_INVOKE = MethodHandle.class.getMethod("invokeWithArguments", Object[].class);
+            MAP_GET = Map.class.getMethod("get", Object.class);
+        }
+        catch (NoSuchMethodException e) {
+            throw new AssertionError(e);
+        }
+    }
 
     private FastMethodHandleProxies() {}
 
@@ -93,10 +126,9 @@ public final class FastMethodHandleProxies
 
         defineProxyMethod(classDefinition, method);
 
-        // note this will not work if interface class is not visible from this class loader,
-        // but we must use this class loader to ensure the bootstrap method is visible
-        ClassLoader targetClassLoader = FastMethodHandleProxies.class.getClassLoader();
-        DynamicClassLoader dynamicClassLoader = new DynamicClassLoader(targetClassLoader, ImmutableMap.of(0L, target));
+        defineBootstrapMethod(classDefinition);
+
+        DynamicClassLoader dynamicClassLoader = new DynamicClassLoader(type.getClassLoader(), ImmutableMap.of(0L, target));
         Class<? extends T> newClass = classGenerator(dynamicClassLoader).defineClass(classDefinition, type);
         try {
             return newClass.getDeclaredConstructor().newInstance();
@@ -121,10 +153,17 @@ public final class FastMethodHandleProxies
                 parameters);
 
         BytecodeNode invocation = invokeDynamic(
-                BOOTSTRAP_METHOD,
+                new BootstrapMethod(
+                        classDefinition.getType(),
+                        "$bootstrap",
+                        type(CallSite.class),
+                        ImmutableList.of(type(Lookup.class), type(String.class), type(MethodType.class))),
                 ImmutableList.of(),
                 target.getName(),
-                target.getReturnType(),
+                type(target.getReturnType()),
+                parameters.stream()
+                        .map(BytecodeExpression::getType)
+                        .collect(toImmutableList()),
                 parameters)
                 .ret();
 
@@ -147,6 +186,42 @@ public final class FastMethodHandleProxies
                 new CatchBlock(throwUndeclared, ImmutableList.of())));
 
         method.getBody().append(invocation);
+    }
+
+    private static void defineBootstrapMethod(ClassDefinition classDefinition)
+    {
+        Parameter callerLookup = arg("callerLookup", Lookup.class);
+
+        MethodDefinition method = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "$bootstrap",
+                type(CallSite.class),
+                callerLookup,
+                arg("name", String.class),
+                arg("type", MethodType.class));
+
+        BytecodeExpression classLoader = callerLookup
+                .invoke(LOOKUP_LOOKUP_CLASS)
+                .invoke(CLASS_GET_CLASSLOADER);
+
+        BytecodeExpression getCallSiteBindingsHandle = callerLookup.invoke(
+                LOOKUP_FIND_VIRTUAL,
+                classLoader.invoke(CLASSLOADER_GET_CLASS),
+                constantString("getCallSiteBindings"),
+                invokeStatic(METHODTYPE, constantClass(Map.class)));
+
+        BytecodeExpression callSiteBindings = getCallSiteBindingsHandle.invoke(
+                METHODHANDLE_INVOKE,
+                newArray(type(Object[].class), ImmutableList.of(classLoader)));
+
+        BytecodeExpression binding = callSiteBindings
+                .cast(Map.class)
+                .invoke(MAP_GET, constantLong(0).cast(Object.class))
+                .cast(MethodHandle.class);
+
+        BytecodeExpression callSite = newInstance(ConstantCallSite.class, binding);
+
+        method.getBody().append(callSite.ret());
     }
 
     private static <T> Method getSingleAbstractMethod(Class<T> type)
@@ -172,28 +247,5 @@ public final class FastMethodHandleProxies
                 method.getReturnType() != returnType ||
                 !name.equals(method.getName()) ||
                 !Arrays.equals(method.getParameterTypes(), parameterTypes);
-    }
-
-    public static final class Bootstrap
-    {
-        public static final Method BOOTSTRAP_METHOD;
-
-        static {
-            try {
-                BOOTSTRAP_METHOD = Bootstrap.class.getMethod("bootstrap", MethodHandles.Lookup.class, String.class, MethodType.class);
-            }
-            catch (NoSuchMethodException e) {
-                throw new AssertionError(e);
-            }
-        }
-
-        private Bootstrap() {}
-
-        @SuppressWarnings("unused")
-        public static CallSite bootstrap(MethodHandles.Lookup callerLookup, String name, MethodType type)
-        {
-            DynamicClassLoader classLoader = (DynamicClassLoader) callerLookup.lookupClass().getClassLoader();
-            return new ConstantCallSite(classLoader.getCallSiteBindings().get(0L));
-        }
     }
 }
