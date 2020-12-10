@@ -30,7 +30,6 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.MoreCollectors.onlyElement;
@@ -38,6 +37,7 @@ import static io.airlift.bytecode.Access.FINAL;
 import static io.airlift.bytecode.Access.PUBLIC;
 import static io.airlift.bytecode.Access.SYNTHETIC;
 import static io.airlift.bytecode.Access.a;
+import static io.airlift.bytecode.BytecodeUtils.uniqueClassName;
 import static io.airlift.bytecode.ClassGenerator.classGenerator;
 import static io.airlift.bytecode.FastMethodHandleProxies.Bootstrap.BOOTSTRAP_METHOD;
 import static io.airlift.bytecode.Parameter.arg;
@@ -49,7 +49,7 @@ import static java.util.Arrays.stream;
 
 public final class FastMethodHandleProxies
 {
-    private static final AtomicLong CLASS_ID = new AtomicLong();
+    private static final String BASE_PACKAGE = FastMethodHandleProxies.class.getPackage().getName() + ".proxy";
 
     private FastMethodHandleProxies() {}
 
@@ -63,7 +63,7 @@ public final class FastMethodHandleProxies
      */
     public static <T> T asInterfaceInstance(Class<T> type, MethodHandle target)
     {
-        String className = "$gen." + type.getName() + "_" + CLASS_ID.incrementAndGet();
+        String className = uniqueClassName(BASE_PACKAGE, type.getSimpleName()).getClassName();
         return asInterfaceInstance(className, type, target);
     }
 
