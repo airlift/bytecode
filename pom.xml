@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>83</version>
+        <version>110</version>
     </parent>
 
     <artifactId>bytecode</artifactId>
@@ -20,7 +20,10 @@
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
 
-        <dep.asm.version>6.2.1</dep.asm.version>
+        <project.build.targetJdk>11</project.build.targetJdk>
+        <air.modernizer.java-version>8</air.modernizer.java-version>
+
+        <dep.asm.version>9.2</dep.asm.version>
     </properties>
 
     <dependencies>
@@ -40,14 +43,6 @@
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-util</artifactId>
             <version>${dep.asm.version}</version>
-        </dependency>
-
-        <!-- this undeclared dependency is used by asm-util -->
-        <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-analysis</artifactId>
-            <version>${dep.asm.version}</version>
-            <scope>runtime</scope>
         </dependency>
 
         <dependency>
