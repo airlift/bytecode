@@ -224,7 +224,7 @@ public final class FastMethodHandleProxies
         method.getBody().append(callSite.ret());
     }
 
-    private static <T> Method getSingleAbstractMethod(Class<T> type)
+    public static <T> Method getSingleAbstractMethod(Class<T> type)
     {
         return stream(type.getMethods())
                 .filter(method -> Modifier.isAbstract(method.getModifiers()))
