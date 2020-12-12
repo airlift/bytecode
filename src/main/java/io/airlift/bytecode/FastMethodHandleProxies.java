@@ -54,12 +54,15 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.invokeDynamic;
 import static io.airlift.bytecode.expression.BytecodeExpressions.invokeStatic;
 import static io.airlift.bytecode.expression.BytecodeExpressions.newArray;
 import static io.airlift.bytecode.expression.BytecodeExpressions.newInstance;
+import static java.lang.invoke.MethodHandles.lookup;
 import static java.lang.invoke.MethodType.methodType;
 import static java.util.Arrays.stream;
 
 public final class FastMethodHandleProxies
 {
     private static final String BASE_PACKAGE = FastMethodHandleProxies.class.getPackage().getName() + ".proxy";
+
+    private static final String DIRECT_METHOD_NAME = "invokeDirect";
 
     private static final Method LOOKUP_FIND_VIRTUAL;
     private static final Method LOOKUP_LOOKUP_CLASS;
@@ -153,11 +156,7 @@ public final class FastMethodHandleProxies
                 parameters);
 
         BytecodeNode invocation = invokeDynamic(
-                new BootstrapMethod(
-                        classDefinition.getType(),
-                        "$bootstrap",
-                        type(CallSite.class),
-                        ImmutableList.of(type(Lookup.class), type(String.class), type(MethodType.class))),
+                getBootstrapMethod(classDefinition),
                 ImmutableList.of(),
                 target.getName(),
                 type(target.getReturnType()),
@@ -186,6 +185,68 @@ public final class FastMethodHandleProxies
                 new CatchBlock(throwUndeclared, ImmutableList.of())));
 
         method.getBody().append(invocation);
+    }
+
+    public static MethodHandle toDirectMethodHandle(MethodHandle target, ClassLoader parentClassLoader)
+    {
+        String className = uniqueClassName(BASE_PACKAGE, "MethodHandle").getClassName();
+        return toDirectMethodHandle(className, target, parentClassLoader);
+    }
+
+    public static MethodHandle toDirectMethodHandle(String className, MethodHandle target, ClassLoader parentClassLoader)
+    {
+        try {
+            lookup().revealDirect(target);
+            return target;
+        }
+        catch (RuntimeException ignored) {
+        }
+
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL, SYNTHETIC),
+                typeFromJavaClassName(className),
+                type(Object.class));
+
+        classDefinition.declareDefaultConstructor(a(PUBLIC));
+
+        defineDirectMethod(classDefinition, target.type());
+
+        defineBootstrapMethod(classDefinition);
+
+        DynamicClassLoader dynamicClassLoader = new DynamicClassLoader(parentClassLoader, ImmutableMap.of(0L, target));
+        Class<?> newClass = classGenerator(dynamicClassLoader).defineClass(classDefinition, Object.class);
+        try {
+            return lookup().findStatic(newClass, DIRECT_METHOD_NAME, target.type());
+        }
+        catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void defineDirectMethod(ClassDefinition classDefinition, MethodType methodType)
+    {
+        List<Parameter> parameters = new ArrayList<>();
+        for (int i = 0; i < methodType.parameterCount(); i++) {
+            parameters.add(arg("arg" + i, methodType.parameterType(i)));
+        }
+
+        MethodDefinition method = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                DIRECT_METHOD_NAME,
+                type(methodType.returnType()),
+                parameters);
+
+        BytecodeExpression invocation = invokeDynamic(
+                getBootstrapMethod(classDefinition),
+                ImmutableList.of(),
+                DIRECT_METHOD_NAME,
+                type(methodType.returnType()),
+                parameters.stream()
+                        .map(BytecodeExpression::getType)
+                        .collect(toImmutableList()),
+                parameters);
+
+        method.getBody().append(invocation.ret());
     }
 
     private static void defineBootstrapMethod(ClassDefinition classDefinition)
@@ -222,6 +283,15 @@ public final class FastMethodHandleProxies
         BytecodeExpression callSite = newInstance(ConstantCallSite.class, binding);
 
         method.getBody().append(callSite.ret());
+    }
+
+    private static BootstrapMethod getBootstrapMethod(ClassDefinition classDefinition)
+    {
+        return new BootstrapMethod(
+                classDefinition.getType(),
+                "$bootstrap",
+                type(CallSite.class),
+                ImmutableList.of(type(Lookup.class), type(String.class), type(MethodType.class)));
     }
 
     public static <T> Method getSingleAbstractMethod(Class<T> type)

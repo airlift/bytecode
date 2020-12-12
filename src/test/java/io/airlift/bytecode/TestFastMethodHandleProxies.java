@@ -17,16 +17,24 @@ import com.google.common.base.VerifyException;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.lang.invoke.CallSite;
+import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleProxies;
+import java.lang.invoke.MethodType;
 import java.lang.invoke.MutableCallSite;
+import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.LongFunction;
 import java.util.function.LongUnaryOperator;
 
+import static com.google.common.base.Throwables.throwIfUnchecked;
+import static io.airlift.bytecode.FastMethodHandleProxies.getSingleAbstractMethod;
+import static io.airlift.bytecode.FastMethodHandleProxies.toDirectMethodHandle;
 import static java.lang.invoke.MethodHandles.lookup;
+import static java.lang.invoke.MethodHandles.privateLookupIn;
 import static java.lang.invoke.MethodType.methodType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testng.Assert.assertEquals;
@@ -40,7 +48,7 @@ public class TestFastMethodHandleProxies
         assertInterface(
                 LongUnaryOperator.class,
                 lookup().findStatic(getClass(), "increment", methodType(long.class, long.class)),
-                addOne -> assertEquals(addOne.applyAsLong(1), 2L));
+                (addOne, wrapped) -> assertEquals(addOne.applyAsLong(1), 2L));
     }
 
     private static long increment(long x)
@@ -55,7 +63,7 @@ public class TestFastMethodHandleProxies
         assertInterface(
                 LongFunction.class,
                 lookup().findStatic(getClass(), "incrementAndPrint", methodType(String.class, long.class)),
-                print -> assertEquals(print.apply(1), "2"));
+                (print, wrapped) -> assertEquals(print.apply(1), "2"));
     }
 
     private static String incrementAndPrint(long x)
@@ -70,7 +78,7 @@ public class TestFastMethodHandleProxies
         assertInterface(
                 StringLength.class,
                 lookup().findStatic(getClass(), "stringLength", methodType(int.class, String.class)),
-                length -> {
+                (length, wrapped) -> {
                     assertEquals(length.length("abc"), 3);
                     assertEquals(length.theAnswer(), 42);
                 });
@@ -101,7 +109,7 @@ public class TestFastMethodHandleProxies
         assertInterface(
                 Runnable.class,
                 lookup().findStatic(getClass(), "throwUncheckedException", methodType(void.class)),
-                runnable -> assertThatThrownBy(runnable::run)
+                (runnable, wrapped) -> assertThatThrownBy(runnable::run)
                         .isInstanceOf(VerifyException.class));
     }
 
@@ -117,9 +125,17 @@ public class TestFastMethodHandleProxies
         assertInterface(
                 Runnable.class,
                 lookup().findStatic(getClass(), "throwCheckedException", methodType(void.class)),
-                runnable -> assertThatThrownBy(runnable::run)
-                        .isInstanceOf(UndeclaredThrowableException.class)
-                        .hasCauseInstanceOf(IOException.class));
+                (runnable, wrapped) -> {
+                    if (wrapped) {
+                        assertThatThrownBy(runnable::run)
+                                .isInstanceOf(UndeclaredThrowableException.class)
+                                .hasCauseInstanceOf(IOException.class);
+                    }
+                    else {
+                        assertThatThrownBy(runnable::run)
+                                .isInstanceOf(IOException.class);
+                    }
+                });
     }
 
     private static void throwCheckedException()
@@ -139,7 +155,7 @@ public class TestFastMethodHandleProxies
         assertInterface(
                 IntSupplier.class,
                 callSite.dynamicInvoker(),
-                supplier -> {
+                (supplier, wrapped) -> {
                     callSite.setTarget(one);
                     assertEquals(supplier.getAsInt(), 1);
                     callSite.setTarget(two);
@@ -157,9 +173,34 @@ public class TestFastMethodHandleProxies
         return 2;
     }
 
-    private static <T> void assertInterface(Class<T> interfaceType, MethodHandle target, Consumer<T> consumer)
+    private static <T> void assertInterface(Class<T> interfaceType, MethodHandle target, BiConsumer<T, Boolean> consumer)
     {
-        consumer.accept(MethodHandleProxies.asInterfaceInstance(interfaceType, target));
-        consumer.accept(FastMethodHandleProxies.asInterfaceInstance(interfaceType, target));
+        consumer.accept(MethodHandleProxies.asInterfaceInstance(interfaceType, target), true);
+        consumer.accept(FastMethodHandleProxies.asInterfaceInstance(interfaceType, target), true);
+        consumer.accept(toInterfaceInstance(interfaceType, target), false);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T toInterfaceInstance(Class<T> type, MethodHandle target)
+    {
+        Method method = getSingleAbstractMethod(type);
+        target = toDirectMethodHandle(target, type.getClassLoader());
+        try {
+            MethodHandle handle = lookup().unreflect(method);
+            MethodType methodType = handle.type().dropParameterTypes(0, 1);
+            Class<?> targetClass = lookup().revealDirect(target).getDeclaringClass();
+            CallSite callSite = LambdaMetafactory.metafactory(
+                    privateLookupIn(targetClass, lookup()),
+                    method.getName(),
+                    methodType(type),
+                    methodType,
+                    target,
+                    methodType);
+            return (T) callSite.getTarget().invoke();
+        }
+        catch (Throwable t) {
+            throwIfUnchecked(t);
+            throw new IllegalArgumentException(t);
+        }
     }
 }
