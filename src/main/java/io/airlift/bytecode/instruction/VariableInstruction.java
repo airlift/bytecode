@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode.instruction;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.BytecodeVisitor;
@@ -25,6 +24,7 @@ import org.objectweb.asm.Type;
 import java.util.List;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.bytecode.OpCode.ILOAD;
 import static io.airlift.bytecode.OpCode.ISTORE;
 
@@ -129,7 +129,7 @@ public abstract class VariableInstruction
         {
             super(variable);
             String type = variable.getType().getClassName();
-            Preconditions.checkArgument(ImmutableList.of("byte", "short", "int").contains(type), "variable must be an byte, short or int, but is %s", type);
+            checkArgument(ImmutableList.of("byte", "short", "int").contains(type), "variable must be an byte, short or int, but is %s", type);
             this.increment = increment;
         }
 

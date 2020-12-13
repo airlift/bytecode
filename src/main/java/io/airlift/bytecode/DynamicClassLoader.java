@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
@@ -24,6 +23,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 public class DynamicClassLoader
         extends ClassLoader
@@ -59,7 +60,7 @@ public class DynamicClassLoader
     public Map<String, Class<?>> defineClasses(Map<String, byte[]> newClasses)
     {
         SetView<String> conflicts = Sets.intersection(pendingClasses.keySet(), newClasses.keySet());
-        Preconditions.checkArgument(conflicts.isEmpty(), "The classes %s have already been defined", conflicts);
+        checkArgument(conflicts.isEmpty(), "The classes %s have already been defined", conflicts);
 
         pendingClasses.putAll(newClasses);
         try {
