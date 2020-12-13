@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Primitives;
 import org.objectweb.asm.AnnotationVisitor;
@@ -28,6 +27,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static java.util.Objects.requireNonNull;
 
@@ -152,14 +152,14 @@ public class AnnotationDefinition
         if (value instanceof List) {
             // todo verify list contains single type
             for (Object v : (List<Object>) value) {
-                Preconditions.checkArgument(ALLOWED_TYPES.contains(v.getClass()), "List contains invalid type %s", v.getClass());
+                checkArgument(ALLOWED_TYPES.contains(v.getClass()), "List contains invalid type %s", v.getClass());
                 if (v instanceof List) {
                     isValidType(value);
                 }
             }
         }
         else {
-            Preconditions.checkArgument(ALLOWED_TYPES.contains(value.getClass()), "Invalid value type %s", value.getClass());
+            checkArgument(ALLOWED_TYPES.contains(value.getClass()), "Invalid value type %s", value.getClass());
         }
     }
 

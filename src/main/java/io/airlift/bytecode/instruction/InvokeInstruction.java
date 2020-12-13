@@ -31,6 +31,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.transform;
 import static io.airlift.bytecode.MethodDefinition.methodDescription;
 import static io.airlift.bytecode.OpCode.INVOKEDYNAMIC;
@@ -39,6 +40,7 @@ import static io.airlift.bytecode.OpCode.INVOKESPECIAL;
 import static io.airlift.bytecode.OpCode.INVOKESTATIC;
 import static io.airlift.bytecode.OpCode.INVOKEVIRTUAL;
 import static io.airlift.bytecode.ParameterizedType.type;
+import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("UnusedDeclaration")
@@ -263,7 +265,7 @@ public class InvokeInstruction
         return new InvokeDynamicInstruction(name,
                 returnType,
                 parameterTypes,
-                bootstrapMethod,
+                BootstrapMethod.from(bootstrapMethod),
                 ImmutableList.copyOf(bootstrapArguments));
     }
 
@@ -276,7 +278,7 @@ public class InvokeInstruction
         return new InvokeDynamicInstruction(name,
                 returnType,
                 parameterTypes,
-                bootstrapMethod,
+                BootstrapMethod.from(bootstrapMethod),
                 ImmutableList.copyOf(bootstrapArguments));
     }
 
@@ -288,7 +290,7 @@ public class InvokeInstruction
         return new InvokeDynamicInstruction(name,
                 type(methodType.returnType()),
                 transform(methodType.parameterList(), ParameterizedType::type),
-                bootstrapMethod,
+                BootstrapMethod.from(bootstrapMethod),
                 ImmutableList.copyOf(bootstrapArguments));
     }
 
@@ -300,6 +302,19 @@ public class InvokeInstruction
         return new InvokeDynamicInstruction(name,
                 type(methodType.returnType()),
                 transform(methodType.parameterList(), ParameterizedType::type),
+                BootstrapMethod.from(bootstrapMethod),
+                ImmutableList.copyOf(bootstrapArguments));
+    }
+
+    public static InstructionNode invokeDynamic(String name,
+            ParameterizedType returnType,
+            Iterable<ParameterizedType> parameterTypes,
+            BootstrapMethod bootstrapMethod,
+            Iterable<Object> bootstrapArguments)
+    {
+        return new InvokeDynamicInstruction(name,
+                returnType,
+                parameterTypes,
                 bootstrapMethod,
                 ImmutableList.copyOf(bootstrapArguments));
     }
@@ -375,13 +390,13 @@ public class InvokeInstruction
     public static class InvokeDynamicInstruction
             extends InvokeInstruction
     {
-        private final Method bootstrapMethod;
+        private final BootstrapMethod bootstrapMethod;
         private final List<Object> bootstrapArguments;
 
         public InvokeDynamicInstruction(String name,
                 ParameterizedType returnType,
                 Iterable<ParameterizedType> parameterTypes,
-                Method bootstrapMethod,
+                BootstrapMethod bootstrapMethod,
                 List<Object> bootstrapArguments)
         {
             super(INVOKEDYNAMIC, null, name, returnType, parameterTypes);
@@ -393,11 +408,9 @@ public class InvokeInstruction
         public void accept(MethodVisitor visitor, MethodGenerationContext generationContext)
         {
             Handle bootstrapMethodHandle = new Handle(Opcodes.H_INVOKESTATIC,
-                    type(bootstrapMethod.getDeclaringClass()).getClassName(),
+                    bootstrapMethod.getOwnerClass().getClassName(),
                     bootstrapMethod.getName(),
-                    methodDescription(
-                            bootstrapMethod.getReturnType(),
-                            bootstrapMethod.getParameterTypes()),
+                    methodDescription(bootstrapMethod.getReturnType(), bootstrapMethod.getParameterType()),
                     false);
 
             visitor.visitInvokeDynamicInsn(getName(),
@@ -406,7 +419,7 @@ public class InvokeInstruction
                     bootstrapArguments.toArray(new Object[bootstrapArguments.size()]));
         }
 
-        public Method getBootstrapMethod()
+        public BootstrapMethod getBootstrapMethod()
         {
             return bootstrapMethod;
         }
@@ -439,5 +452,52 @@ public class InvokeInstruction
         }
         CharMatcher invalid = CharMatcher.anyOf(".;[/<>");
         checkArgument(invalid.matchesNoneOf(name), "invalid name: %s", name);
+    }
+
+    public static class BootstrapMethod
+    {
+        private final ParameterizedType ownerClass;
+        private final String name;
+        private final ParameterizedType returnType;
+        private final List<ParameterizedType> parameterType;
+
+        public BootstrapMethod(ParameterizedType ownerClass, String name, ParameterizedType returnType, List<ParameterizedType> parameterType)
+        {
+            this.ownerClass = requireNonNull(ownerClass, "ownerClass is null");
+            this.name = requireNonNull(name, "name is null");
+            this.returnType = requireNonNull(returnType, "returnType is null");
+            this.parameterType = ImmutableList.copyOf(requireNonNull(parameterType, "parameterType is null"));
+        }
+
+        public ParameterizedType getOwnerClass()
+        {
+            return ownerClass;
+        }
+
+        public String getName()
+        {
+            return name;
+        }
+
+        public ParameterizedType getReturnType()
+        {
+            return returnType;
+        }
+
+        public List<ParameterizedType> getParameterType()
+        {
+            return parameterType;
+        }
+
+        public static BootstrapMethod from(Method method)
+        {
+            return new BootstrapMethod(
+                    type(method.getDeclaringClass()),
+                    method.getName(),
+                    type(method.getReturnType()),
+                    stream(method.getParameterTypes())
+                            .map(ParameterizedType::type)
+                            .collect(toImmutableList()));
+        }
     }
 }

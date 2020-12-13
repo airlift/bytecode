@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>83</version>
+        <version>104</version>
     </parent>
 
     <artifactId>bytecode</artifactId>
@@ -20,7 +20,10 @@
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
 
-        <dep.asm.version>6.2.1</dep.asm.version>
+        <project.build.targetJdk>11</project.build.targetJdk>
+        <air.modernizer.java-version>8</air.modernizer.java-version>
+
+        <dep.asm.version>9.0</dep.asm.version>
     </properties>
 
     <dependencies>
