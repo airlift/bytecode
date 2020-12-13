@@ -29,7 +29,6 @@
  */
 package io.airlift.bytecode;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
@@ -37,6 +36,7 @@ import org.objectweb.asm.tree.MethodNode;
 
 import java.util.List;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterables.transform;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.ParameterizedType.typeFromPathName;
@@ -126,7 +126,7 @@ public class ClassInfo
 
     public List<MethodNode> getMethods()
     {
-        Preconditions.checkState(methods != null, "Methods were not loaded for type %s", type);
+        checkState(methods != null, "Methods were not loaded for type %s", type);
         return methods;
     }
 
