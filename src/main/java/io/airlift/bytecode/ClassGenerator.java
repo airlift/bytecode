@@ -125,7 +125,9 @@ public class ClassGenerator
 
         for (ClassDefinition classDefinition : classDefinitions) {
             ClassWriter writer = new SmartClassWriter(classInfoLoader);
-
+            classDefinition.getClassBytes().ifPresent(bytes -> {
+                new ClassReader(bytes).accept(writer, ClassReader.SKIP_DEBUG);
+            });
             try {
                 classDefinition.visit(fakeLineNumbers ? new AddFakeLineNumberClassVisitor(writer) : writer);
             }

@@ -17,12 +17,13 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
 
 import javax.annotation.concurrent.NotThreadSafe;
-
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.collect.Iterables.any;
@@ -36,8 +37,7 @@ import static org.objectweb.asm.Opcodes.ACC_SUPER;
 import static org.objectweb.asm.Opcodes.V1_8;
 
 @NotThreadSafe
-public class ClassDefinition
-{
+public class ClassDefinition {
     private final EnumSet<Access> access;
     private final ParameterizedType type;
     private final ParameterizedType superClass;
@@ -48,13 +48,13 @@ public class ClassDefinition
     private final MethodDefinition classInitializer;
     private String source;
     private String debug;
+    private byte[] bytes;
 
     public ClassDefinition(
             EnumSet<Access> access,
             String name,
             ParameterizedType superClass,
-            ParameterizedType... interfaces)
-    {
+            ParameterizedType... interfaces) {
         this(access, new ParameterizedType(name), superClass, interfaces);
     }
 
@@ -62,8 +62,7 @@ public class ClassDefinition
             EnumSet<Access> access,
             ParameterizedType type,
             ParameterizedType superClass,
-            ParameterizedType... interfaces)
-    {
+            ParameterizedType... interfaces) {
         requireNonNull(access, "access is null");
         requireNonNull(type, "type is null");
         requireNonNull(superClass, "superClass is null");
@@ -77,58 +76,51 @@ public class ClassDefinition
         classInitializer = new MethodDefinition(this, a(STATIC), "<clinit>", ParameterizedType.type(void.class), ImmutableList.of());
     }
 
-    public Set<Access> getAccess()
-    {
+    public Set<Access> getAccess() {
         return ImmutableSet.copyOf(access);
     }
 
-    public String getName()
-    {
+    public String getName() {
         return type.getClassName();
     }
 
-    public ParameterizedType getType()
-    {
+    public ParameterizedType getType() {
         return type;
     }
 
-    public ParameterizedType getSuperClass()
-    {
+    public ParameterizedType getSuperClass() {
         return superClass;
     }
 
-    public String getSource()
-    {
+    public String getSource() {
         return source;
     }
 
-    public List<ParameterizedType> getInterfaces()
-    {
+    public List<ParameterizedType> getInterfaces() {
         return ImmutableList.copyOf(interfaces);
     }
 
-    public List<AnnotationDefinition> getAnnotations()
-    {
+    public List<AnnotationDefinition> getAnnotations() {
         return ImmutableList.copyOf(annotations);
     }
 
-    public List<FieldDefinition> getFields()
-    {
+    public List<FieldDefinition> getFields() {
         return ImmutableList.copyOf(fields);
     }
 
-    public List<MethodDefinition> getMethods()
-    {
+    public List<MethodDefinition> getMethods() {
         return ImmutableList.copyOf(methods);
     }
 
-    public boolean isInterface()
-    {
+    public boolean isInterface() {
         return access.contains(INTERFACE);
     }
 
-    public void visit(ClassVisitor visitor)
-    {
+    public Optional<byte[]> getClassBytes() {
+        return Optional.ofNullable(bytes);
+    }
+
+    public void visit(ClassVisitor visitor) {
         // Generic signature if super class or any interface is generic
         String signature = null;
         if (superClass.isGeneric() || any(interfaces, ParameterizedType::isGeneric)) {
@@ -171,54 +163,51 @@ public class ClassDefinition
         visitor.visitEnd();
     }
 
-    public AnnotationDefinition declareAnnotation(Class<?> type)
-    {
+    public AnnotationDefinition declareAnnotation(Class<?> type) {
         AnnotationDefinition annotationDefinition = new AnnotationDefinition(type);
         annotations.add(annotationDefinition);
         return annotationDefinition;
     }
 
-    public AnnotationDefinition declareAnnotation(ParameterizedType type)
-    {
+    public AnnotationDefinition declareAnnotation(ParameterizedType type) {
         AnnotationDefinition annotationDefinition = new AnnotationDefinition(type);
         annotations.add(annotationDefinition);
         return annotationDefinition;
     }
 
-    public FieldDefinition declareField(EnumSet<Access> access, String name, Class<?> type)
-    {
+    public FieldDefinition declareField(EnumSet<Access> access, String name, Class<?> type) {
         FieldDefinition fieldDefinition = new FieldDefinition(this, access, name, type);
         fields.add(fieldDefinition);
         return fieldDefinition;
     }
 
-    public ClassDefinition addField(EnumSet<Access> access, String name, Class<?> type)
-    {
+    public ClassDefinition addField(EnumSet<Access> access, String name, Class<?> type) {
         declareField(access, name, type);
         return this;
     }
 
-    public FieldDefinition declareField(EnumSet<Access> access, String name, ParameterizedType type)
-    {
+    public FieldDefinition declareField(EnumSet<Access> access, String name, ParameterizedType type) {
         FieldDefinition fieldDefinition = new FieldDefinition(this, access, name, type);
         fields.add(fieldDefinition);
         return fieldDefinition;
     }
 
-    public ClassDefinition addField(EnumSet<Access> access, String name, ParameterizedType type)
-    {
+    public ClassDefinition withClassBytes(byte[] bytes) {
+        this.bytes = bytes;
+        return this;
+    }
+
+    public ClassDefinition addField(EnumSet<Access> access, String name, ParameterizedType type) {
         declareField(access, name, type);
         return this;
     }
 
-    public ClassDefinition addField(FieldDefinition field)
-    {
+    public ClassDefinition addField(FieldDefinition field) {
         fields.add(field);
         return this;
     }
 
-    public MethodDefinition getClassInitializer()
-    {
+    public MethodDefinition getClassInitializer() {
         if (isInterface()) {
             throw new IllegalAccessError("Interface does not have class initializer");
         }
@@ -227,20 +216,17 @@ public class ClassDefinition
 
     public MethodDefinition declareConstructor(
             EnumSet<Access> access,
-            Parameter... parameters)
-    {
+            Parameter... parameters) {
         return declareMethod(access, "<init>", ParameterizedType.type(void.class), ImmutableList.copyOf(parameters));
     }
 
     public MethodDefinition declareConstructor(
             EnumSet<Access> access,
-            Iterable<Parameter> parameters)
-    {
+            Iterable<Parameter> parameters) {
         return declareMethod(access, "<init>", ParameterizedType.type(void.class), ImmutableList.copyOf(parameters));
     }
 
-    public ClassDefinition declareDefaultConstructor(EnumSet<Access> access)
-    {
+    public ClassDefinition declareDefaultConstructor(EnumSet<Access> access) {
         MethodDefinition constructor = declareConstructor(access);
         constructor
                 .getBody()
@@ -250,14 +236,12 @@ public class ClassDefinition
         return this;
     }
 
-    public ClassDefinition addMethod(MethodDefinition method)
-    {
+    public ClassDefinition addMethod(MethodDefinition method) {
         methods.add(method);
         return this;
     }
 
-    public ClassDefinition visitSource(String source, String debug)
-    {
+    public ClassDefinition visitSource(String source, String debug) {
         this.source = source;
         this.debug = debug;
         return this;
@@ -267,8 +251,7 @@ public class ClassDefinition
             EnumSet<Access> access,
             String name,
             ParameterizedType returnType,
-            Parameter... parameters)
-    {
+            Parameter... parameters) {
         return declareMethod(access, name, returnType, ImmutableList.copyOf(parameters));
     }
 
@@ -276,8 +259,7 @@ public class ClassDefinition
             EnumSet<Access> access,
             String name,
             ParameterizedType returnType,
-            Iterable<Parameter> parameters)
-    {
+            Iterable<Parameter> parameters) {
         MethodDefinition methodDefinition = new MethodDefinition(this, access, name, returnType, parameters);
         for (MethodDefinition method : methods) {
             if (name.equals(method.getName()) && method.getParameterTypes().equals(methodDefinition.getParameterTypes())) {
@@ -290,22 +272,19 @@ public class ClassDefinition
 
     public static String genericClassSignature(
             ParameterizedType classType,
-            ParameterizedType... interfaceTypes)
-    {
+            ParameterizedType... interfaceTypes) {
         return Joiner.on("").join(
                 concat(ImmutableList.of(classType), ImmutableList.copyOf(interfaceTypes)));
     }
 
     public static String genericClassSignature(
             ParameterizedType classType,
-            List<ParameterizedType> interfaceTypes)
-    {
+            List<ParameterizedType> interfaceTypes) {
         return Joiner.on("").join(concat(ImmutableList.of(classType), interfaceTypes));
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append("ClassDefinition");
         sb.append("{access=").append(access);
