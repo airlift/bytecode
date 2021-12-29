@@ -19,6 +19,7 @@
     <properties>
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
+        <air.check.skip-jacoco>true</air.check.skip-jacoco>
 
         <project.build.targetJdk>11</project.build.targetJdk>
         <air.modernizer.java-version>8</air.modernizer.java-version>
