@@ -22,8 +22,8 @@ import io.airlift.bytecode.ParameterizedType;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import static com.google.common.collect.Iterables.transform;
 import static java.util.Objects.requireNonNull;
 
 class InvokeDynamicBytecodeExpression
@@ -75,7 +75,7 @@ class InvokeDynamicBytecodeExpression
         StringBuilder builder = new StringBuilder();
         builder.append("[").append(bootstrapMethod.getName());
         if (!bootstrapArgs.isEmpty()) {
-            builder.append("(").append(Joiner.on(", ").join(transform(bootstrapArgs, ConstantBytecodeExpression::renderConstant))).append(")");
+            builder.append(bootstrapArgs.stream().map(ConstantBytecodeExpression::renderConstant).collect(Collectors.joining(", ", "(", ")")));
         }
         builder.append("]=>");
 

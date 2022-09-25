@@ -28,10 +28,12 @@ import org.objectweb.asm.Opcodes;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.Iterables.transform;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.bytecode.MethodDefinition.methodDescription;
 import static io.airlift.bytecode.OpCode.INVOKEDYNAMIC;
 import static io.airlift.bytecode.OpCode.INVOKEINTERFACE;
@@ -158,12 +160,12 @@ public class InvokeInstruction
 
     public static InstructionNode invokeConstructor(Class<?> target, Class<?>... parameterTypes)
     {
-        return invokeConstructor(type(target), transform(ImmutableList.copyOf(parameterTypes), ParameterizedType::type));
+        return invokeConstructor(type(target), Arrays.stream(parameterTypes).map(ParameterizedType::type).collect(toImmutableList()));
     }
 
     public static InstructionNode invokeConstructor(Class<?> target, Iterable<Class<?>> parameterTypes)
     {
-        return invokeConstructor(type(target), transform(parameterTypes, ParameterizedType::type));
+        return invokeConstructor(type(target), StreamSupport.stream(parameterTypes.spliterator(), false).map(ParameterizedType::type).collect(toImmutableList()));
     }
 
     public static InstructionNode invokeConstructor(ParameterizedType target, ParameterizedType... parameterTypes)
@@ -220,7 +222,7 @@ public class InvokeInstruction
                 type(method.getDeclaringClass()),
                 method.getName(),
                 type(method.getReturnType()),
-                transform(ImmutableList.copyOf(method.getParameterTypes()), ParameterizedType::type));
+                Arrays.stream(method.getParameterTypes()).map(ParameterizedType::type).collect(toImmutableList()));
     }
 
     private static InstructionNode invoke(OpCode invocationType, MethodDefinition method)
@@ -247,7 +249,7 @@ public class InvokeInstruction
                 type(target),
                 name,
                 type(returnType),
-                transform(parameterTypes, ParameterizedType::type));
+                StreamSupport.stream(parameterTypes.spliterator(), false).map(ParameterizedType::type).collect(toImmutableList()));
     }
 
     //
@@ -287,7 +289,7 @@ public class InvokeInstruction
     {
         return new InvokeDynamicInstruction(name,
                 type(methodType.returnType()),
-                transform(methodType.parameterList(), ParameterizedType::type),
+                methodType.parameterList().stream().map(ParameterizedType::type).collect(toImmutableList()),
                 bootstrapMethod,
                 ImmutableList.copyOf(bootstrapArguments));
     }
@@ -299,7 +301,7 @@ public class InvokeInstruction
     {
         return new InvokeDynamicInstruction(name,
                 type(methodType.returnType()),
-                transform(methodType.parameterList(), ParameterizedType::type),
+                methodType.parameterList().stream().map(ParameterizedType::type).collect(toImmutableList()),
                 bootstrapMethod,
                 ImmutableList.copyOf(bootstrapArguments));
     }
@@ -403,7 +405,7 @@ public class InvokeInstruction
             visitor.visitInvokeDynamicInsn(getName(),
                     getMethodDescription(),
                     bootstrapMethodHandle,
-                    bootstrapArguments.toArray(new Object[bootstrapArguments.size()]));
+                    bootstrapArguments.toArray(new Object[0]));
         }
 
         public Method getBootstrapMethod()

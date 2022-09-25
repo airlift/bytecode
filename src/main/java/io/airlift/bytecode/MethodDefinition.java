@@ -17,6 +17,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Streams;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.tree.InsnNode;
@@ -29,10 +30,12 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.Iterables.transform;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.toAccessModifier;
 import static io.airlift.bytecode.ParameterizedType.type;
+import static java.util.Objects.requireNonNullElseGet;
+import static java.util.stream.Collectors.joining;
 import static org.objectweb.asm.Opcodes.RETURN;
 
 @SuppressWarnings("UnusedDeclaration")
@@ -77,15 +80,12 @@ public class MethodDefinition
 
         this.access = access;
         this.name = name;
-        if (returnType != null) {
-            this.returnType = returnType;
-        }
-        else {
-            this.returnType = type(void.class);
-        }
+        this.returnType = requireNonNullElseGet(returnType, () -> type(void.class));
         this.parameters = ImmutableList.copyOf(parameters);
         this.parameterTypes = Lists.transform(this.parameters, Parameter::getType);
-        this.parameterAnnotations = ImmutableList.copyOf(transform(parameters, input -> new ArrayList<>()));
+        this.parameterAnnotations = Streams.stream(parameters)
+                .map(input -> new ArrayList<AnnotationDefinition>())
+                .collect(toImmutableList());
         Optional<ParameterizedType> thisType = Optional.empty();
         if (!declaringClass.isInterface() && !access.contains(STATIC)) {
             thisType = Optional.of(declaringClass.getType());
@@ -263,8 +263,7 @@ public class MethodDefinition
         StringBuilder sb = new StringBuilder();
         Joiner.on(' ').appendTo(sb, access).append(' ');
         sb.append(returnType.getJavaClassName()).append(' ');
-        sb.append(name).append('(');
-        Joiner.on(", ").appendTo(sb, transform(parameters, Parameter::getSourceString)).append(')');
+        sb.append(parameters.stream().map(Parameter::getSourceString).collect(joining(", ", "(", ")")));
         return sb.toString();
     }
 
@@ -283,7 +282,7 @@ public class MethodDefinition
     {
         return methodDescription(
                 type(returnType),
-                Lists.transform(parameterTypes, ParameterizedType::type));
+                parameterTypes.stream().map(ParameterizedType::type).toList());
     }
 
     public static String methodDescription(
@@ -298,9 +297,7 @@ public class MethodDefinition
             List<ParameterizedType> parameterTypes)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append("(");
-        Joiner.on("").appendTo(sb, transform(parameterTypes, ParameterizedType::getType));
-        sb.append(")");
+        sb.append(parameterTypes.stream().map(ParameterizedType::getType).collect(joining("", "(", ")")));
         sb.append(returnType.getType());
         return sb.toString();
     }

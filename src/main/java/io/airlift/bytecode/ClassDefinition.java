@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.objectweb.asm.ClassVisitor;
@@ -24,16 +23,16 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static com.google.common.collect.Iterables.any;
-import static com.google.common.collect.Iterables.concat;
 import static io.airlift.bytecode.Access.INTERFACE;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.a;
 import static io.airlift.bytecode.Access.toAccessModifier;
 import static java.util.Objects.requireNonNull;
 import static org.objectweb.asm.Opcodes.ACC_SUPER;
-import static org.objectweb.asm.Opcodes.V1_8;
+import static org.objectweb.asm.Opcodes.V17;
 
 @NotThreadSafe
 public class ClassDefinition
@@ -131,7 +130,7 @@ public class ClassDefinition
     {
         // Generic signature if super class or any interface is generic
         String signature = null;
-        if (superClass.isGeneric() || any(interfaces, ParameterizedType::isGeneric)) {
+        if (superClass.isGeneric() || interfaces.stream().anyMatch(ParameterizedType::isGeneric)) {
             signature = genericClassSignature(superClass, interfaces);
         }
 
@@ -140,7 +139,7 @@ public class ClassDefinition
             interfaces[i] = this.interfaces.get(i).getClassName();
         }
         int accessModifier = toAccessModifier(access);
-        visitor.visit(V1_8, isInterface() ? accessModifier : accessModifier | ACC_SUPER, type.getClassName(), signature, superClass.getClassName(), interfaces);
+        visitor.visit(V17, isInterface() ? accessModifier : accessModifier | ACC_SUPER, type.getClassName(), signature, superClass.getClassName(), interfaces);
 
         // visit source
         if (source != null) {
@@ -292,15 +291,16 @@ public class ClassDefinition
             ParameterizedType classType,
             ParameterizedType... interfaceTypes)
     {
-        return Joiner.on("").join(
-                concat(ImmutableList.of(classType), ImmutableList.copyOf(interfaceTypes)));
+        return genericClassSignature(classType, ImmutableList.copyOf(interfaceTypes));
     }
 
     public static String genericClassSignature(
             ParameterizedType classType,
             List<ParameterizedType> interfaceTypes)
     {
-        return Joiner.on("").join(concat(ImmutableList.of(classType), interfaceTypes));
+        return Stream.concat(Stream.of(classType), interfaceTypes.stream())
+                .map(Object::toString)
+                .collect(Collectors.joining());
     }
 
     @Override
