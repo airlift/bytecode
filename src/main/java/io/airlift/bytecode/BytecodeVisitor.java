@@ -33,6 +33,7 @@ import io.airlift.bytecode.instruction.Constant.BoxedIntegerConstant;
 import io.airlift.bytecode.instruction.Constant.BoxedLongConstant;
 import io.airlift.bytecode.instruction.Constant.ClassConstant;
 import io.airlift.bytecode.instruction.Constant.DoubleConstant;
+import io.airlift.bytecode.instruction.Constant.DynamicConstant;
 import io.airlift.bytecode.instruction.Constant.FloatConstant;
 import io.airlift.bytecode.instruction.Constant.IntConstant;
 import io.airlift.bytecode.instruction.Constant.LongConstant;
@@ -247,6 +248,11 @@ public class BytecodeVisitor<T>
     public T visitClassConstant(BytecodeNode parent, ClassConstant classConstant)
     {
         return visitConstant(parent, classConstant);
+    }
+
+    public T visitDynamicConstant(BytecodeNode parent, DynamicConstant dynamicConstant)
+    {
+        return visitConstant(parent, dynamicConstant);
     }
 
     //

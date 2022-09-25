@@ -19,12 +19,17 @@ import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.BytecodeVisitor;
 import io.airlift.bytecode.MethodGenerationContext;
 import io.airlift.bytecode.ParameterizedType;
+import org.objectweb.asm.ConstantDynamic;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
+import static io.airlift.bytecode.MethodDefinition.methodDescription;
 import static io.airlift.bytecode.OpCode.ACONST_NULL;
 import static io.airlift.bytecode.OpCode.BIPUSH;
 import static io.airlift.bytecode.OpCode.DCONST_0;
@@ -146,6 +151,32 @@ public abstract class Constant
     {
         requireNonNull(value, "value is null");
         return new ClassConstant(value);
+    }
+
+    public static Constant loadDynamic(
+            String name,
+            ParameterizedType type,
+            Method bootstrapMethod,
+            Iterable<Object> bootstrapArguments)
+    {
+        return new DynamicConstant(
+                name,
+                type,
+                bootstrapMethod,
+                ImmutableList.copyOf(bootstrapArguments));
+    }
+
+    public static Constant loadDynamic(
+            String name,
+            ParameterizedType type,
+            Method bootstrapMethod,
+            Object... bootstrapArguments)
+    {
+        return new DynamicConstant(
+                name,
+                type,
+                bootstrapMethod,
+                ImmutableList.copyOf(bootstrapArguments));
     }
 
     public abstract Object getValue();
@@ -625,6 +656,69 @@ public abstract class Constant
         public <T> T accept(BytecodeNode parent, BytecodeVisitor<T> visitor)
         {
             return visitor.visitClassConstant(parent, this);
+        }
+    }
+
+    public static class DynamicConstant
+            extends Constant
+    {
+        private final String name;
+        private final ParameterizedType type;
+        private final Method bootstrapMethod;
+        private final List<Object> bootstrapArguments;
+
+        public DynamicConstant(String name, ParameterizedType type, Method bootstrapMethod, List<Object> bootstrapArguments)
+        {
+            this.name = name;
+            this.type = type;
+            this.bootstrapMethod = bootstrapMethod;
+            this.bootstrapArguments = bootstrapArguments;
+        }
+
+        @Override
+        public ParameterizedType getValue()
+        {
+            return type;
+        }
+
+        public String getName()
+        {
+            return name;
+        }
+
+        public Method getBootstrapMethod()
+        {
+            return bootstrapMethod;
+        }
+
+        public List<Object> getBootstrapArguments()
+        {
+            return bootstrapArguments;
+        }
+
+        @Override
+        public void accept(MethodVisitor visitor, MethodGenerationContext generationContext)
+        {
+            Handle bootstrapMethodHandle = new Handle(
+                    Opcodes.H_INVOKESTATIC,
+                    type(bootstrapMethod.getDeclaringClass()).getClassName(),
+                    bootstrapMethod.getName(),
+                    methodDescription(
+                            bootstrapMethod.getReturnType(),
+                            bootstrapMethod.getParameterTypes()),
+                    false);
+
+            visitor.visitLdcInsn(new ConstantDynamic(
+                    name,
+                    type.getType(),
+                    bootstrapMethodHandle,
+                    bootstrapArguments.toArray()));
+        }
+
+        @Override
+        public <T> T accept(BytecodeNode parent, BytecodeVisitor<T> visitor)
+        {
+            return visitor.visitDynamicConstant(parent, this);
         }
     }
 }

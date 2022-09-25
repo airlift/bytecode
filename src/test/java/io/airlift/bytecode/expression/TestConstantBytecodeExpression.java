@@ -13,14 +13,18 @@
  */
 package io.airlift.bytecode.expression;
 
+import com.google.common.collect.ImmutableList;
 import org.testng.annotations.Test;
 
+import java.lang.invoke.MethodHandles.Lookup;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assertBytecodeExpression;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantBoolean;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantClass;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantDouble;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantDynamic;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantFalse;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantFloat;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantInt;
@@ -74,5 +78,16 @@ public class TestConstantBytecodeExpression
         assertBytecodeExpression(constantClass(long.class), long.class, "long.class");
         assertBytecodeExpression(constantClass(short.class), short.class, "short.class");
         assertBytecodeExpression(constantClass(void.class), void.class, "void.class");
+
+        Method constantBootstrap = TestConstantBytecodeExpression.class.getMethod("constantBootstrap", Lookup.class, String.class, Class.class, int.class);
+        assertBytecodeExpression(
+                constantDynamic("name", List.class, constantBootstrap, 43),
+                ImmutableList.of("name", List.class, 43),
+                "List.class");
+    }
+
+    public static Object constantBootstrap(Lookup caller, String name, Class<?> type, int index)
+    {
+        return ImmutableList.of(name, type, index);
     }
 }
