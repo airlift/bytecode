@@ -33,6 +33,7 @@ import io.airlift.bytecode.instruction.Constant.BoxedIntegerConstant;
 import io.airlift.bytecode.instruction.Constant.BoxedLongConstant;
 import io.airlift.bytecode.instruction.Constant.ClassConstant;
 import io.airlift.bytecode.instruction.Constant.DoubleConstant;
+import io.airlift.bytecode.instruction.Constant.DynamicConstant;
 import io.airlift.bytecode.instruction.Constant.FloatConstant;
 import io.airlift.bytecode.instruction.Constant.IntConstant;
 import io.airlift.bytecode.instruction.Constant.LongConstant;
@@ -513,6 +514,17 @@ public class DumpBytecodeVisitor
     public Void visitClassConstant(BytecodeNode parent, ClassConstant classConstant)
     {
         printLine("load constant %s.class", classConstant.getValue().getJavaClassName());
+        return null;
+    }
+
+    @Override
+    public Void visitDynamicConstant(BytecodeNode parent, DynamicConstant dynamicConstant)
+    {
+        printLine(
+                "load constant %s %s%s",
+                dynamicConstant.getValue().getJavaClassName(),
+                dynamicConstant.getBootstrapMethod().getName(),
+                dynamicConstant.getBootstrapArguments());
         return null;
     }
 

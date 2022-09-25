@@ -27,11 +27,13 @@ import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.Iterables.toArray;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.ArithmeticBytecodeExpression.createArithmeticBytecodeExpression;
 import static io.airlift.bytecode.instruction.Constant.loadBoolean;
 import static io.airlift.bytecode.instruction.Constant.loadClass;
 import static io.airlift.bytecode.instruction.Constant.loadDouble;
+import static io.airlift.bytecode.instruction.Constant.loadDynamic;
 import static io.airlift.bytecode.instruction.Constant.loadFloat;
 import static io.airlift.bytecode.instruction.Constant.loadInt;
 import static io.airlift.bytecode.instruction.Constant.loadLong;
@@ -129,6 +131,52 @@ public final class BytecodeExpressions
     public static BytecodeExpression constantString(String value)
     {
         return new ConstantBytecodeExpression(String.class, loadString(value));
+    }
+
+    public static BytecodeExpression constantDynamic(
+            String name,
+            Class<?> type,
+            Method bootstrapMethod,
+            Iterable<? extends Object> bootstrapArgs)
+    {
+        return constantDynamic(name, type(type), bootstrapMethod, ImmutableList.copyOf(bootstrapArgs));
+    }
+
+    public static BytecodeExpression constantDynamic(
+            String name,
+            Class<?> type,
+            Method bootstrapMethod,
+            Object... bootstrapArgs)
+    {
+        return constantDynamic(name, type(type), bootstrapMethod, ImmutableList.copyOf(bootstrapArgs));
+    }
+
+    public static BytecodeExpression constantDynamic(
+            String name,
+            ParameterizedType type,
+            Method bootstrapMethod,
+            Object... bootstrapArgs)
+    {
+        return constantDynamic(name, type, bootstrapMethod, ImmutableList.copyOf(bootstrapArgs));
+    }
+
+    public static BytecodeExpression constantDynamic(
+            String name,
+            ParameterizedType type,
+            Method bootstrapMethod,
+            Iterable<? extends Object> bootstrapArgs)
+    {
+        requireNonNull(name, "name is null");
+        requireNonNull(type, "type is null");
+        requireNonNull(bootstrapMethod, "bootstrapMethod is null");
+        requireNonNull(bootstrapArgs, "bootstrapArgs is null");
+        return new ConstantBytecodeExpression(
+                type,
+                loadDynamic(
+                        name,
+                        type,
+                        bootstrapMethod,
+                        toArray(bootstrapArgs, Object.class)));
     }
 
     public static BytecodeExpression defaultValue(ParameterizedType type)
