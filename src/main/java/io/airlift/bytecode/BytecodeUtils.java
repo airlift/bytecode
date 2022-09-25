@@ -16,6 +16,7 @@ package io.airlift.bytecode;
 import com.google.common.base.CharMatcher;
 
 import java.io.StringWriter;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.airlift.bytecode.ParameterizedType.typeFromJavaClassName;
@@ -30,6 +31,14 @@ public final class BytecodeUtils
     {
         String className = toJavaIdentifierString(baseName) + "_" + CLASS_ID.incrementAndGet();
         return typeFromJavaClassName(basePackage + ".$gen." + className);
+    }
+
+    public static ParameterizedType uniqueClassName(Lookup lookup, String baseName)
+    {
+        // hidden classed require the class to be in the lookup package
+        String basePackage = lookup.lookupClass().getPackage().getName();
+        String className = toJavaIdentifierString(baseName) + "_" + CLASS_ID.incrementAndGet();
+        return typeFromJavaClassName(basePackage + "." + className);
     }
 
     public static String toJavaIdentifierString(String className)
