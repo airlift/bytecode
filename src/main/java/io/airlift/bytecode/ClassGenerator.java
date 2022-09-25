@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.collect.Iterables.getOnlyElement;
+import static com.google.common.collect.MoreCollectors.onlyElement;
 import static com.google.common.io.CharStreams.nullWriter;
 import static io.airlift.bytecode.ClassInfoLoader.createClassInfoLoader;
 import static io.airlift.bytecode.ParameterizedType.typeFromJavaClassName;
@@ -115,7 +115,7 @@ public class ClassGenerator
     public <T> Class<? extends T> defineClass(ClassDefinition classDefinition, Class<T> superType)
     {
         Map<String, Class<?>> classes = defineClasses(ImmutableList.of(classDefinition));
-        return getOnlyElement(classes.values()).asSubclass(superType);
+        return classes.values().stream().collect(onlyElement()).asSubclass(superType);
     }
 
     public Map<String, Class<?>> defineClasses(List<ClassDefinition> classDefinitions)
