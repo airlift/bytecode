@@ -37,13 +37,24 @@ import org.objectweb.asm.util.CheckClassAdapter;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static io.airlift.bytecode.ParameterizedType.typeFromPathName;
+import static java.util.Objects.requireNonNull;
 
 public class ClassInfoLoader
 {
+    public static ClassInfoLoader createClassInfoLoader(ClassDefinition classDefinition, Lookup lookup)
+    {
+        ClassNode classNode = new ClassNode();
+        classDefinition.visit(classNode);
+
+        return new ClassInfoLoader(ImmutableMap.of(classDefinition.getType(), classNode), ImmutableMap.of(), new LookupLoader(lookup), true);
+    }
+
     public static ClassInfoLoader createClassInfoLoader(Iterable<ClassDefinition> classDefinitions, ClassLoader classLoader)
     {
         ImmutableMap.Builder<ParameterizedType, ClassNode> classNodes = ImmutableMap.builder();
@@ -52,20 +63,20 @@ public class ClassInfoLoader
             classDefinition.visit(classNode);
             classNodes.put(classDefinition.getType(), classNode);
         }
-        return new ClassInfoLoader(classNodes.build(), ImmutableMap.of(), classLoader, true);
+        return new ClassInfoLoader(classNodes.build(), ImmutableMap.of(), new ClassLoaderLoader(classLoader), true);
     }
 
     private final Map<ParameterizedType, ClassNode> classNodes;
     private final Map<ParameterizedType, byte[]> bytecodes;
-    private final ClassLoader classLoader;
+    private final Loader loader;
     private final Map<ParameterizedType, ClassInfo> classInfoCache = new HashMap<>();
     private final boolean loadMethodNodes;
 
-    public ClassInfoLoader(Map<ParameterizedType, ClassNode> classNodes, Map<ParameterizedType, byte[]> bytecodes, ClassLoader classLoader, boolean loadMethodNodes)
+    private ClassInfoLoader(Map<ParameterizedType, ClassNode> classNodes, Map<ParameterizedType, byte[]> bytecodes, Loader loader, boolean loadMethodNodes)
     {
         this.classNodes = ImmutableMap.copyOf(classNodes);
         this.bytecodes = ImmutableMap.copyOf(bytecodes);
-        this.classLoader = classLoader;
+        this.loader = loader;
         this.loadMethodNodes = loadMethodNodes;
     }
 
@@ -95,19 +106,11 @@ public class ClassInfoLoader
         }
         else {
             // load class file from class loader
-            String classFileName = type.getClassName() + ".class";
-            try (InputStream is = classLoader.getResourceAsStream(classFileName)) {
-                classReader = new ClassReader(is);
-            }
-            catch (IOException e) {
-                // check if class is already loaded
-                try {
-                    Class<?> aClass = classLoader.loadClass(type.getJavaClassName());
-                    return new ClassInfo(this, aClass);
-                }
-                catch (ClassNotFoundException e1) {
-                    throw new RuntimeException("Class not found " + type, e);
-                }
+            classReader = loader.createByteCodeClassReader(type)
+                    .orElse(null);
+            if (classReader == null) {
+                // load class directly and extract class info from loaded class
+                return new ClassInfo(this, loader.loadClass(type));
             }
         }
 
@@ -144,6 +147,78 @@ public class ClassInfoLoader
                 header += 2;
             }
             return new ClassInfo(this, type, access, superClass, interfaces.build(), null);
+        }
+    }
+
+    private interface Loader
+    {
+        Optional<ClassReader> createByteCodeClassReader(ParameterizedType type);
+
+        Class<?> loadClass(ParameterizedType type);
+    }
+
+    private static class LookupLoader
+            implements Loader
+    {
+        private final Lookup lookup;
+
+        public LookupLoader(Lookup lookup)
+        {
+            this.lookup = requireNonNull(lookup, "lookup is null");
+        }
+
+        @Override
+        public Optional<ClassReader> createByteCodeClassReader(ParameterizedType type)
+        {
+            return Optional.empty();
+        }
+
+        @Override
+        public Class<?> loadClass(ParameterizedType type)
+        {
+            try {
+                return lookup.findClass(type.getJavaClassName());
+            }
+            catch (ClassNotFoundException | IllegalAccessException e) {
+                throw new RuntimeException("Class not found " + type, e);
+            }
+        }
+    }
+
+    private static class ClassLoaderLoader
+            implements Loader
+    {
+        private final ClassLoader classLoader;
+
+        public ClassLoaderLoader(ClassLoader classLoader)
+        {
+            this.classLoader = requireNonNull(classLoader, "classLoader is null");
+        }
+
+        @Override
+        public Optional<ClassReader> createByteCodeClassReader(ParameterizedType type)
+        {
+            String classFileName = type.getClassName() + ".class";
+            try (InputStream inputStream = classLoader.getResourceAsStream(classFileName)) {
+                if (inputStream == null) {
+                    return Optional.empty();
+                }
+                return Optional.of(new ClassReader(inputStream));
+            }
+            catch (IOException ignored) {
+                return Optional.empty();
+            }
+        }
+
+        @Override
+        public Class<?> loadClass(ParameterizedType type)
+        {
+            try {
+                return classLoader.loadClass(type.getJavaClassName());
+            }
+            catch (ClassNotFoundException e) {
+                throw new RuntimeException("Class not found " + type, e);
+            }
         }
     }
 }
