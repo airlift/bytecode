@@ -162,7 +162,7 @@ public abstract class Constant
         return new DynamicConstant(
                 name,
                 type,
-                bootstrapMethod,
+                BootstrapMethod.from(bootstrapMethod),
                 ImmutableList.copyOf(bootstrapArguments));
     }
 
@@ -171,6 +171,19 @@ public abstract class Constant
             ParameterizedType type,
             Method bootstrapMethod,
             Object... bootstrapArguments)
+    {
+        return new DynamicConstant(
+                name,
+                type,
+                BootstrapMethod.from(bootstrapMethod),
+                ImmutableList.copyOf(bootstrapArguments));
+    }
+
+    public static Constant loadDynamic(
+            String name,
+            ParameterizedType type,
+            BootstrapMethod bootstrapMethod,
+            Iterable<Object> bootstrapArguments)
     {
         return new DynamicConstant(
                 name,
@@ -664,10 +677,10 @@ public abstract class Constant
     {
         private final String name;
         private final ParameterizedType type;
-        private final Method bootstrapMethod;
+        private final BootstrapMethod bootstrapMethod;
         private final List<Object> bootstrapArguments;
 
-        public DynamicConstant(String name, ParameterizedType type, Method bootstrapMethod, List<Object> bootstrapArguments)
+        public DynamicConstant(String name, ParameterizedType type, BootstrapMethod bootstrapMethod, List<Object> bootstrapArguments)
         {
             this.name = name;
             this.type = type;
@@ -686,7 +699,7 @@ public abstract class Constant
             return name;
         }
 
-        public Method getBootstrapMethod()
+        public BootstrapMethod getBootstrapMethod()
         {
             return bootstrapMethod;
         }
@@ -701,7 +714,7 @@ public abstract class Constant
         {
             Handle bootstrapMethodHandle = new Handle(
                     Opcodes.H_INVOKESTATIC,
-                    type(bootstrapMethod.getDeclaringClass()).getClassName(),
+                    bootstrapMethod.getOwnerClass().getClassName(),
                     bootstrapMethod.getName(),
                     methodDescription(
                             bootstrapMethod.getReturnType(),
