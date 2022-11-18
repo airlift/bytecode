@@ -15,6 +15,7 @@ package io.airlift.bytecode;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.debug.LineNumberNode;
+import io.airlift.bytecode.instruction.BootstrapMethod;
 import io.airlift.bytecode.instruction.Constant;
 import io.airlift.bytecode.instruction.InvokeInstruction;
 import io.airlift.bytecode.instruction.JumpInstruction;
@@ -488,6 +489,16 @@ public class BytecodeBlock
             ParameterizedType returnType,
             Iterable<ParameterizedType> parameterTypes,
             Method bootstrapMethod,
+            List<Object> bootstrapArgs)
+    {
+        nodes.add(InvokeInstruction.invokeDynamic(name, returnType, parameterTypes, bootstrapMethod, bootstrapArgs));
+        return this;
+    }
+
+    public BytecodeNode invokeDynamic(String name,
+            ParameterizedType returnType,
+            Iterable<ParameterizedType> parameterTypes,
+            BootstrapMethod bootstrapMethod,
             List<Object> bootstrapArgs)
     {
         nodes.add(InvokeInstruction.invokeDynamic(name, returnType, parameterTypes, bootstrapMethod, bootstrapArgs));
