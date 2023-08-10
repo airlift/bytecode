@@ -20,50 +20,50 @@ import java.util.Optional;
 
 import static io.airlift.bytecode.ClassInfoLoader.createClassInfoLoader;
 
-public class HiddenClassGenerator
+public class SingleClassGenerator
 {
     private final Lookup lookup;
     private final ByteCodeGenerator byteCodeGenerator;
 
-    public static HiddenClassGenerator hiddenClassGenerator(Lookup lookup)
+    public static SingleClassGenerator singleClassGenerator(Lookup lookup)
     {
-        return new HiddenClassGenerator(lookup, ByteCodeGenerator.byteCodeGenerator());
+        return new SingleClassGenerator(lookup, ByteCodeGenerator.byteCodeGenerator());
     }
 
-    private HiddenClassGenerator(Lookup lookup, ByteCodeGenerator byteCodeGenerator)
+    private SingleClassGenerator(Lookup lookup, ByteCodeGenerator byteCodeGenerator)
     {
         this.lookup = lookup;
         this.byteCodeGenerator = byteCodeGenerator;
     }
 
-    public HiddenClassGenerator fakeLineNumbers(boolean fakeLineNumbers)
+    public SingleClassGenerator fakeLineNumbers(boolean fakeLineNumbers)
     {
-        return new HiddenClassGenerator(lookup, byteCodeGenerator.fakeLineNumbers(fakeLineNumbers));
+        return new SingleClassGenerator(lookup, byteCodeGenerator.fakeLineNumbers(fakeLineNumbers));
     }
 
-    public HiddenClassGenerator runAsmVerifier(boolean runAsmVerifier)
+    public SingleClassGenerator runAsmVerifier(boolean runAsmVerifier)
     {
-        return new HiddenClassGenerator(lookup, byteCodeGenerator.runAsmVerifier(runAsmVerifier ? new LookupClassLoader(lookup) : null));
+        return new SingleClassGenerator(lookup, byteCodeGenerator.runAsmVerifier(runAsmVerifier ? new LookupClassLoader(lookup) : null));
     }
 
-    public HiddenClassGenerator dumpRawBytecode(boolean dumpRawBytecode)
+    public SingleClassGenerator dumpRawBytecode(boolean dumpRawBytecode)
     {
-        return new HiddenClassGenerator(lookup, byteCodeGenerator.dumpRawBytecode(dumpRawBytecode));
+        return new SingleClassGenerator(lookup, byteCodeGenerator.dumpRawBytecode(dumpRawBytecode));
     }
 
-    public HiddenClassGenerator outputTo(Writer output)
+    public SingleClassGenerator outputTo(Writer output)
     {
-        return new HiddenClassGenerator(lookup, byteCodeGenerator.outputTo(output));
+        return new SingleClassGenerator(lookup, byteCodeGenerator.outputTo(output));
     }
 
-    public HiddenClassGenerator dumpClassFilesTo(Path dumpClassPath)
+    public SingleClassGenerator dumpClassFilesTo(Path dumpClassPath)
     {
         return dumpClassFilesTo(Optional.of(dumpClassPath));
     }
 
-    public HiddenClassGenerator dumpClassFilesTo(Optional<Path> dumpClassPath)
+    public SingleClassGenerator dumpClassFilesTo(Optional<Path> dumpClassPath)
     {
-        return new HiddenClassGenerator(lookup, byteCodeGenerator.dumpClassFilesTo(dumpClassPath));
+        return new SingleClassGenerator(lookup, byteCodeGenerator.dumpClassFilesTo(dumpClassPath));
     }
 
     public <T> Class<? extends T> defineHiddenClass(ClassDefinition classDefinition, Class<T> superType, Optional<Object> classData)

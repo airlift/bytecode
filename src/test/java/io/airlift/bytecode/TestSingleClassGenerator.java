@@ -27,16 +27,16 @@ import static io.airlift.bytecode.Access.FINAL;
 import static io.airlift.bytecode.Access.PUBLIC;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.a;
-import static io.airlift.bytecode.HiddenClassGenerator.hiddenClassGenerator;
 import static io.airlift.bytecode.Parameter.arg;
 import static io.airlift.bytecode.ParameterizedType.type;
+import static io.airlift.bytecode.SingleClassGenerator.singleClassGenerator;
 import static io.airlift.bytecode.expression.BytecodeExpressions.add;
 import static java.lang.invoke.MethodHandles.lookup;
 import static java.nio.file.Files.createTempDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.testng.Assert.assertEquals;
 
-public class TestHiddenClassGenerator
+public class TestSingleClassGenerator
 {
     @Test
     public void testGenerator()
@@ -65,7 +65,7 @@ public class TestHiddenClassGenerator
         try {
             StringWriter writer = new StringWriter();
 
-            Class<?> clazz = hiddenClassGenerator(lookup())
+            Class<?> clazz = singleClassGenerator(lookup())
                     .fakeLineNumbers(true)
                     .runAsmVerifier(true)
                     .dumpRawBytecode(true)
