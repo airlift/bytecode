@@ -13,12 +13,26 @@
  */
 package io.airlift.bytecode;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.reflect.Reflection;
+import io.airlift.bytecode.instruction.BootstrapMethod;
+
 import java.io.Writer;
 import java.lang.invoke.MethodHandles.Lookup;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
+import static io.airlift.bytecode.Access.PRIVATE;
+import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.ClassInfoLoader.createClassInfoLoader;
+import static io.airlift.bytecode.ParameterizedType.type;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantClass;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantString;
+import static io.airlift.bytecode.expression.BytecodeExpressions.newArray;
 
 public class SingleClassGenerator
 {
@@ -66,6 +80,22 @@ public class SingleClassGenerator
         return new SingleClassGenerator(lookup, byteCodeGenerator.dumpClassFilesTo(dumpClassPath));
     }
 
+    public <T> Class<? extends T> defineStandardClass(ClassDefinition classDefinition, Class<T> superType, Optional<Object> classData)
+    {
+        ClassInfoLoader classInfoLoader = createClassInfoLoader(classDefinition, lookup);
+        byte[] bytecode = byteCodeGenerator.generateByteCode(classInfoLoader, classDefinition);
+
+        Class<?> clazz = StandardClassLoader.defineSingleClass(lookup, classDefinition.getType().getJavaClassName(), bytecode, classData);
+
+        try {
+            Reflection.initialize(clazz);
+        }
+        catch (VerifyError e) {
+            throw new RuntimeException(e);
+        }
+        return clazz.asSubclass(superType);
+    }
+
     public <T> Class<? extends T> defineHiddenClass(ClassDefinition classDefinition, Class<T> superType, Optional<Object> classData)
     {
         ClassInfoLoader classInfoLoader = createClassInfoLoader(classDefinition, lookup);
@@ -84,6 +114,36 @@ public class SingleClassGenerator
             throw new RuntimeException(e);
         }
         return definedClassLookup.lookupClass().asSubclass(superType);
+    }
+
+    /**
+     * Creates a bootstrap method that can load class data for a standard class. This is has the same
+     * behavior as {@link java.lang.invoke.MethodHandles#classDataAt(Lookup, String, Class, int)} except
+     * that the it works for standard classed created by {@link #defineStandardClass(ClassDefinition, Class, Optional)}
+     */
+    public static BootstrapMethod declareStandardClassDataAtBootstrapMethod(ClassDefinition definition)
+    {
+        // Generate a bootstrap method that loads constants from the StandardClassLoader
+        // The generated code uses reflection to call StandardClassLoader.classDataAt(),
+        // so the generated code does not need access to the StandardClassLoader class
+        Parameter lookupParam = Parameter.arg("lookup", Lookup.class);
+        Parameter nameParam = Parameter.arg("name", String.class);
+        Parameter typeParam = Parameter.arg("type", Class.class);
+        Parameter indexParam = Parameter.arg("index", int.class);
+
+        String randomName = "$$bootstrap_" + ThreadLocalRandom.current().nextInt(1_000_000);
+        MethodDefinition bootstrap = definition.declareMethod(EnumSet.of(PRIVATE, STATIC), randomName, type(Object.class), lookupParam, nameParam, typeParam, indexParam);
+        bootstrap.addException(Throwable.class);
+        Scope scope = bootstrap.getScope();
+        Variable classLoader = scope.declareVariable("classLoader", bootstrap.getBody(), lookupParam.invoke("lookupClass", Class.class).invoke("getClassLoader", ClassLoader.class));
+        bootstrap
+                .getBody()
+                .append(classLoader.invoke("getClass", Class.class)
+                        .invoke("getMethod", Method.class, constantString("classDataAt"), newArray(type(Class[].class), ImmutableList.of(constantClass(int.class))))
+                        .invoke("invoke", Object.class, classLoader.cast(Object.class), newArray(type(Object[].class), ImmutableList.of(indexParam.cast(Integer.class))))
+                        .ret());
+
+        return BootstrapMethod.from(bootstrap);
     }
 
     private static class LookupClassLoader
@@ -106,6 +166,44 @@ public class SingleClassGenerator
             catch (IllegalAccessException e) {
                 throw new ClassNotFoundException(name, e);
             }
+        }
+    }
+
+    public static class StandardClassLoader
+            extends ClassLoader
+    {
+        public static Class<?> defineSingleClass(Lookup lookup, String className, byte[] bytecode, Optional<Object> classData)
+        {
+            return new StandardClassLoader(lookup.lookupClass().getClassLoader(), classData).defineClass(className, bytecode);
+        }
+
+        private final Object classData;
+
+        private StandardClassLoader(ClassLoader parentClassLoader, Optional<Object> classData)
+        {
+            super(parentClassLoader);
+            this.classData = classData.orElse(null);
+        }
+
+        private Class<?> defineClass(String className, byte[] bytecode)
+        {
+            return defineClass(className, bytecode, 0, bytecode.length);
+        }
+
+        public Object classData()
+        {
+            return classData;
+        }
+
+        public Object classDataAt(int index)
+        {
+            // this is the same behavior as Lookup.classDataAt
+            @SuppressWarnings("unchecked") List<Object> classData = (List<Object>) classData();
+            if (classData == null) {
+                return null;
+            }
+
+            return classData.get(index);
         }
     }
 }
