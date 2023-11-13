@@ -25,11 +25,53 @@ import java.util.function.Function;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assertBytecodeNode;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantInt;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantLong;
 import static io.airlift.bytecode.expression.BytecodeExpressions.newInstance;
 import static org.testng.Assert.assertEquals;
 
 public class TestSetVariableBytecodeExpression
 {
+    @Test
+    public void testIncrement()
+            throws Exception
+    {
+        assertBytecodeNode(scope -> {
+            Variable byteValue = scope.declareVariable(byte.class, "byte");
+            assertEquals(byteValue.increment().toString(), "byte++;");
+            return new BytecodeBlock()
+                    .append(byteValue.set(constantInt(0)))
+                    .append(byteValue.increment())
+                    .append(byteValue.ret());
+        }, type(byte.class), (byte) 1);
+
+        assertBytecodeNode(scope -> {
+            Variable shortValue = scope.declareVariable(short.class, "short");
+            assertEquals(shortValue.increment().toString(), "short++;");
+            return new BytecodeBlock()
+                    .append(shortValue.set(constantInt(0)))
+                    .append(shortValue.increment())
+                    .append(shortValue.ret());
+        }, type(short.class), (short) 1);
+
+        assertBytecodeNode(scope -> {
+            Variable intValue = scope.declareVariable(int.class, "int");
+            assertEquals(intValue.increment().toString(), "int++;");
+            return new BytecodeBlock()
+                    .append(intValue.set(constantInt(0)))
+                    .append(intValue.increment())
+                    .append(intValue.ret());
+        }, type(int.class), 1);
+
+        assertBytecodeNode(scope -> {
+            Variable longValue = scope.declareVariable(long.class, "long");
+            assertEquals(longValue.increment().toString(), "long = (long + 1L);");
+            return new BytecodeBlock()
+                    .append(longValue.set(constantLong(0)))
+                    .append(longValue.increment())
+                    .append(longValue.ret());
+        }, type(long.class), 1L);
+    }
+
     @Test
     public void testGetField()
             throws Exception

@@ -21,7 +21,7 @@ import java.util.List;
 
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.BytecodeExpressions.add;
-import static io.airlift.bytecode.expression.BytecodeExpressions.constantInt;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantLong;
 import static java.util.Objects.requireNonNull;
 
 public class Variable
@@ -47,7 +47,15 @@ public class Variable
 
     public BytecodeExpression increment()
     {
-        return new SetVariableBytecodeExpression(this, add(this, constantInt(1)));
+        if (IntegerIncrementVariableBytecodeExpression.isSupportedType(getType())) {
+            return new IntegerIncrementVariableBytecodeExpression(this);
+        }
+        else if (getType().getPrimitiveType() == long.class) {
+            return new SetVariableBytecodeExpression(this, add(this, constantLong(1)));
+        }
+        else {
+            throw new UnsupportedOperationException("Variable %s of type %s does not support incrementing".formatted(getName(), getType()));
+        }
     }
 
     @Override
@@ -66,6 +74,48 @@ public class Variable
     public List<BytecodeNode> getChildNodes()
     {
         return ImmutableList.of();
+    }
+
+    private static final class IntegerIncrementVariableBytecodeExpression
+            extends BytecodeExpression
+    {
+        private final Variable variable;
+
+        public IntegerIncrementVariableBytecodeExpression(Variable variable)
+        {
+            super(type(void.class));
+            this.variable = requireNonNull(variable, "variable is null");
+            if (!isSupportedType(variable.getType())) {
+                throw new IllegalArgumentException("Variable %s of type %s is not supported for integer increment".formatted(variable.getName(), variable.getType()));
+            }
+        }
+
+        @Override
+        public BytecodeNode getBytecode(MethodGenerationContext generationContext)
+        {
+            return VariableInstruction.incrementVariable(variable, (byte) 1);
+        }
+
+        @Override
+        public List<BytecodeNode> getChildNodes()
+        {
+            return ImmutableList.of();
+        }
+
+        @Override
+        protected String formatOneLine()
+        {
+            return variable.getName() + "++";
+        }
+
+        public static boolean isSupportedType(ParameterizedType type)
+        {
+            if (!type.isPrimitive()) {
+                return false;
+            }
+            Class<?> primitiveType = type.getPrimitiveType();
+            return primitiveType == byte.class || primitiveType == short.class || primitiveType == int.class;
+        }
     }
 
     private static final class SetVariableBytecodeExpression
