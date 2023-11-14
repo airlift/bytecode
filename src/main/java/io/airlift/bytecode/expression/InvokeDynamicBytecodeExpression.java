@@ -19,8 +19,8 @@ import io.airlift.bytecode.BytecodeBlock;
 import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.MethodGenerationContext;
 import io.airlift.bytecode.ParameterizedType;
+import io.airlift.bytecode.instruction.BootstrapMethod;
 
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,7 +29,7 @@ import static java.util.Objects.requireNonNull;
 class InvokeDynamicBytecodeExpression
         extends BytecodeExpression
 {
-    private final Method bootstrapMethod;
+    private final BootstrapMethod bootstrapMethod;
     private final List<Object> bootstrapArgs;
     private final String methodName;
     private final ParameterizedType returnType;
@@ -37,7 +37,7 @@ class InvokeDynamicBytecodeExpression
     private final List<ParameterizedType> parameterTypes;
 
     InvokeDynamicBytecodeExpression(
-            Method bootstrapMethod,
+            BootstrapMethod bootstrapMethod,
             Iterable<?> bootstrapArgs,
             String methodName,
             ParameterizedType returnType,
