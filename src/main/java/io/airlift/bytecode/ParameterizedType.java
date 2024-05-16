@@ -220,12 +220,7 @@ public class ParameterizedType
         }
 
         ParameterizedType that = (ParameterizedType) o;
-
-        if (!type.equals(that.type)) {
-            return false;
-        }
-
-        return true;
+        return type.equals(that.type);
     }
 
     @Override
