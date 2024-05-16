@@ -110,7 +110,7 @@ public class ParameterizedType
         this.className = getPathName(type);
         this.simpleName = type.getSimpleName();
 
-        ImmutableList.Builder<String> builder = ImmutableList.builder();
+        ImmutableList.Builder<String> builder = ImmutableList.builderWithExpectedSize(parameters.length);
         for (Class<?> parameter : parameters) {
             builder.add(toInternalIdentifier(parameter));
         }
@@ -128,7 +128,7 @@ public class ParameterizedType
         this.className = getPathName(type);
         this.simpleName = type.getSimpleName();
 
-        ImmutableList.Builder<String> builder = ImmutableList.builder();
+        ImmutableList.Builder<String> builder = ImmutableList.builderWithExpectedSize(parameters.length);
         for (ParameterizedType parameter : parameters) {
             builder.add(parameter.toString());
         }
