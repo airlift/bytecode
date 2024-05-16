@@ -18,6 +18,9 @@ import io.airlift.bytecode.expression.BytecodeExpression;
 import org.objectweb.asm.Type;
 
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +36,7 @@ public class Scope
     private final Map<String, Variable> variables = new TreeMap<>();
     private final Map<String, Variable> tempVariables = new TreeMap<>();
     private final List<Variable> allVariables = new ArrayList<>();
+    private final Map<ParameterizedType, Deque<Variable>> releasedTempVariables = new HashMap<>();
 
     private final Variable thisVariable;
 
@@ -71,6 +75,22 @@ public class Scope
         allVariables.add(variable);
 
         return variable;
+    }
+
+    public Variable getOrCreateTempVariable(Class<?> type)
+    {
+        Deque<Variable> typeVariables = releasedTempVariables.get(type(type));
+        if (typeVariables == null || typeVariables.isEmpty()) {
+            return createTempVariable(type);
+        }
+        return typeVariables.pop();
+    }
+
+    public void releaseTempVariableForReuse(Variable tempVariable)
+    {
+        requireNonNull(tempVariable, "tempVariable is null");
+        checkArgument(tempVariable == tempVariables.get(tempVariable.getName()), "invalid tempVariable release: %s", tempVariable);
+        releasedTempVariables.computeIfAbsent(tempVariable.getType(), ignored -> new LinkedList<>()).push(tempVariable);
     }
 
     public Variable getTempVariable(String name)
