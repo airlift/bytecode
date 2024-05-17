@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>bytecode</artifactId>
-    <version>1.6-SNAPSHOT</version>
+    <version>1.6</version>
 
     <description>High-level library for generating JVM bytecode</description>
     <url>https://github.com/airlift/bytecode</url>
@@ -19,7 +19,7 @@
     <scm>
         <connection>scm:git:git://github.com/airlift/bytecode.git</connection>
         <developerConnection>scm:git:git@github.com:airlift/bytecode.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>1.6</tag>
         <url>https://github.com/airlift/bytecode</url>
     </scm>
 
