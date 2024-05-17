@@ -16,6 +16,13 @@
 
     <inceptionYear>2012</inceptionYear>
 
+    <scm>
+        <connection>scm:git:git://github.com/airlift/bytecode.git</connection>
+        <developerConnection>scm:git:git@github.com:airlift/bytecode.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/airlift/bytecode</url>
+    </scm>
+
     <properties>
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
