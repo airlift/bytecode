@@ -18,6 +18,7 @@ import io.airlift.bytecode.FieldDefinition;
 import io.airlift.bytecode.MethodDefinition;
 import io.airlift.bytecode.OpCode;
 import io.airlift.bytecode.ParameterizedType;
+import io.airlift.bytecode.instruction.BootstrapMethod;
 
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
@@ -27,7 +28,6 @@ import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.Iterables.toArray;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.ArithmeticBytecodeExpression.createArithmeticBytecodeExpression;
 import static io.airlift.bytecode.instruction.Constant.loadBoolean;
@@ -176,7 +176,26 @@ public final class BytecodeExpressions
                         name,
                         type,
                         bootstrapMethod,
-                        toArray(bootstrapArgs, Object.class)));
+                        ImmutableList.copyOf(bootstrapArgs)));
+    }
+
+    public static BytecodeExpression constantDynamic(
+            String name,
+            ParameterizedType type,
+            BootstrapMethod bootstrapMethod,
+            Iterable<? extends Object> bootstrapArgs)
+    {
+        requireNonNull(name, "name is null");
+        requireNonNull(type, "type is null");
+        requireNonNull(bootstrapMethod, "bootstrapMethod is null");
+        requireNonNull(bootstrapArgs, "bootstrapArgs is null");
+        return new ConstantBytecodeExpression(
+                type,
+                loadDynamic(
+                        name,
+                        type,
+                        bootstrapMethod,
+                        ImmutableList.copyOf(bootstrapArgs)));
     }
 
     public static BytecodeExpression defaultValue(ParameterizedType type)
@@ -570,6 +589,23 @@ public final class BytecodeExpressions
 
     public static BytecodeExpression invokeDynamic(
             Method bootstrapMethod,
+            Iterable<? extends Object> bootstrapArgs,
+            String methodName,
+            ParameterizedType returnType,
+            Iterable<ParameterizedType> parameterTypes,
+            Iterable<? extends BytecodeExpression> parameters)
+    {
+        return new InvokeDynamicBytecodeExpression(
+                BootstrapMethod.from(bootstrapMethod),
+                bootstrapArgs,
+                methodName,
+                returnType,
+                parameters,
+                parameterTypes);
+    }
+
+    public static BytecodeExpression invokeDynamic(
+            BootstrapMethod bootstrapMethod,
             Iterable<? extends Object> bootstrapArgs,
             String methodName,
             ParameterizedType returnType,
