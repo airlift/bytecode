@@ -17,7 +17,7 @@ import io.airlift.bytecode.BytecodeBlock;
 import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.Scope;
 import io.airlift.bytecode.Variable;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Point;
 import java.lang.reflect.Field;
@@ -30,28 +30,29 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.constantInt;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantString;
 import static io.airlift.bytecode.expression.BytecodeExpressions.newInstance;
 import static io.airlift.bytecode.expression.BytecodeExpressions.setStatic;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSetFieldBytecodeExpression
 {
+    @SuppressWarnings({"WeakerAccess", "PublicField"})
     public static String testField;
 
     @Test
-    public void testSetField()
+    void testSetField()
             throws Exception
     {
         assertSetPoint(point -> point.setField("x", constantInt(42)));
         assertSetPoint(point -> point.setField(field(Point.class, "x"), constantInt(42)));
     }
 
-    public static void assertSetPoint(Function<BytecodeExpression, BytecodeExpression> setX)
+    private static void assertSetPoint(Function<BytecodeExpression, BytecodeExpression> setX)
             throws Exception
     {
         Function<Scope, BytecodeNode> nodeGenerator = scope -> {
             Variable point = scope.declareVariable(Point.class, "point");
 
             BytecodeExpression setExpression = setX.apply(point);
-            assertEquals(setExpression.toString(), "point.x = 42;");
+            assertThat(setExpression.toString()).isEqualTo("point.x = 42;");
 
             return new BytecodeBlock()
                     .append(point.set(newInstance(Point.class, constantInt(3), constantInt(7))))
@@ -63,7 +64,7 @@ public class TestSetFieldBytecodeExpression
     }
 
     @Test
-    public void testSetStaticField()
+    void testSetStaticField()
             throws Exception
     {
         assertSetStaticField(setStatic(getClass(), "testField", constantString("testValue")));
@@ -71,12 +72,13 @@ public class TestSetFieldBytecodeExpression
         assertSetStaticField(setStatic(type(getClass()), "testField", constantString("testValue")));
     }
 
-    public void assertSetStaticField(BytecodeExpression setStaticField)
+    @SuppressWarnings("AssignmentToStaticFieldFromInstanceMethod")
+    private void assertSetStaticField(BytecodeExpression setStaticField)
             throws Exception
     {
         testField = "fail";
         assertBytecodeExpression(setStaticField, null, getClass().getSimpleName() + ".testField = \"testValue\";");
-        assertEquals(testField, "testValue");
+        assertThat(testField).isEqualTo("testValue");
     }
 
     private static Field field(Class<?> clazz, String name)

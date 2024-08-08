@@ -14,7 +14,7 @@
 package io.airlift.bytecode;
 
 import com.google.common.collect.ImmutableList;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.StringWriter;
 import java.lang.reflect.Method;
@@ -34,12 +34,11 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.add;
 import static java.lang.invoke.MethodHandles.lookup;
 import static java.nio.file.Files.createTempDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.testng.Assert.assertEquals;
 
-public class TestHiddenClassGenerator
+class TestHiddenClassGenerator
 {
     @Test
-    public void testGenerator()
+    void testGenerator()
             throws Exception
     {
         ClassDefinition classDefinition = new ClassDefinition(
@@ -74,7 +73,7 @@ public class TestHiddenClassGenerator
                     .defineHiddenClass(classDefinition, Object.class, Optional.of("class data"));
 
             Method add = clazz.getMethod("add", int.class, int.class);
-            assertEquals(add.invoke(null, 13, 42), 55);
+            assertThat(add.invoke(null, 13, 42)).isEqualTo(55);
 
             assertThat(writer.toString())
                     .contains("00002 I I  : I I  :     IADD")

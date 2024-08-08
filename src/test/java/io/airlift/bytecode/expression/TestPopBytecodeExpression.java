@@ -13,28 +13,30 @@
  */
 package io.airlift.bytecode.expression;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assertBytecodeExpression;
 import static io.airlift.bytecode.expression.BytecodeExpressions.invokeStatic;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestPopBytecodeExpression
 {
+    @SuppressWarnings("AssignmentToStaticFieldFromInstanceMethod")
     @Test
-    public void testGetField()
+    void testGetField()
             throws Exception
     {
         intCount = 0;
         assertBytecodeExpression(invokeStatic(getClass(), "incrementAndGetIntCount", int.class).pop(), null, getClass().getSimpleName() + ".incrementAndGetIntCount();");
-        assertEquals(intCount, 1);
+        assertThat(intCount).isEqualTo(1);
         longCount = 0;
         assertBytecodeExpression(invokeStatic(getClass(), "incrementAndGetLongCount", long.class).pop(), null, getClass().getSimpleName() + ".incrementAndGetLongCount();");
-        assertEquals(longCount, 1);
+        assertThat(longCount).isEqualTo(1);
     }
 
     private static int intCount;
 
+    @SuppressWarnings("unused")
     public static int incrementAndGetIntCount()
     {
         return intCount++;
@@ -42,6 +44,7 @@ public class TestPopBytecodeExpression
 
     private static long longCount;
 
+    @SuppressWarnings("unused")
     public static long incrementAndGetLongCount()
     {
         return longCount++;

@@ -14,7 +14,7 @@
 package io.airlift.bytecode.expression;
 
 import com.google.common.collect.ImmutableList;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.Method;
@@ -36,7 +36,7 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.constantTrue;
 public class TestConstantBytecodeExpression
 {
     @Test
-    public void test()
+    void test()
             throws Exception
     {
         assertBytecodeExpression(constantNull(List.class), null, "null");

@@ -17,7 +17,7 @@ import io.airlift.bytecode.BytecodeBlock;
 import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.Scope;
 import io.airlift.bytecode.Variable;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Point;
 import java.util.function.Function;
@@ -27,17 +27,17 @@ import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assert
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantInt;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantLong;
 import static io.airlift.bytecode.expression.BytecodeExpressions.newInstance;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestSetVariableBytecodeExpression
+class TestSetVariableBytecodeExpression
 {
     @Test
-    public void testIncrement()
+    void testIncrement()
             throws Exception
     {
         assertBytecodeNode(scope -> {
             Variable byteValue = scope.declareVariable(byte.class, "byte");
-            assertEquals(byteValue.increment().toString(), "byte++;");
+            assertThat(byteValue.increment().toString()).isEqualTo("byte++;");
             return new BytecodeBlock()
                     .append(byteValue.set(constantInt(0)))
                     .append(byteValue.increment())
@@ -46,7 +46,7 @@ public class TestSetVariableBytecodeExpression
 
         assertBytecodeNode(scope -> {
             Variable shortValue = scope.declareVariable(short.class, "short");
-            assertEquals(shortValue.increment().toString(), "short++;");
+            assertThat(shortValue.increment().toString()).isEqualTo("short++;");
             return new BytecodeBlock()
                     .append(shortValue.set(constantInt(0)))
                     .append(shortValue.increment())
@@ -55,7 +55,7 @@ public class TestSetVariableBytecodeExpression
 
         assertBytecodeNode(scope -> {
             Variable intValue = scope.declareVariable(int.class, "int");
-            assertEquals(intValue.increment().toString(), "int++;");
+            assertThat(intValue.increment().toString()).isEqualTo("int++;");
             return new BytecodeBlock()
                     .append(intValue.set(constantInt(0)))
                     .append(intValue.increment())
@@ -64,7 +64,7 @@ public class TestSetVariableBytecodeExpression
 
         assertBytecodeNode(scope -> {
             Variable longValue = scope.declareVariable(long.class, "long");
-            assertEquals(longValue.increment().toString(), "long = (long + 1L);");
+            assertThat(longValue.increment().toString()).isEqualTo("long = (long + 1L);");
             return new BytecodeBlock()
                     .append(longValue.set(constantLong(0)))
                     .append(longValue.increment())
@@ -73,14 +73,14 @@ public class TestSetVariableBytecodeExpression
     }
 
     @Test
-    public void testGetField()
+    void testGetField()
             throws Exception
     {
         Function<Scope, BytecodeNode> nodeGenerator = scope -> {
             Variable point = scope.declareVariable(Point.class, "point");
             BytecodeExpression setPoint = point.set(newInstance(Point.class, constantInt(3), constantInt(7)));
 
-            assertEquals(setPoint.toString(), "point = new Point(3, 7);");
+            assertThat(setPoint.toString()).isEqualTo("point = new Point(3, 7);");
 
             return new BytecodeBlock()
                     .append(setPoint)
