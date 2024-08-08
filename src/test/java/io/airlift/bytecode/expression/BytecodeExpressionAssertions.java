@@ -31,17 +31,17 @@ import static io.airlift.bytecode.BytecodeUtils.dumpBytecodeTree;
 import static io.airlift.bytecode.BytecodeUtils.uniqueClassName;
 import static io.airlift.bytecode.ClassGenerator.classGenerator;
 import static io.airlift.bytecode.ParameterizedType.type;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public final class BytecodeExpressionAssertions
 {
-    public static final AtomicBoolean DUMP_BYTECODE_TREE = new AtomicBoolean();
+    private static final AtomicBoolean DUMP_BYTECODE_TREE = new AtomicBoolean();
 
     private BytecodeExpressionAssertions() {}
 
     static void assertBytecodeExpressionType(BytecodeExpression expression, ParameterizedType type)
     {
-        assertEquals(expression.getType(), type);
+        assertThat(expression.getType()).isEqualTo(type);
     }
 
     public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, String expectedRendering)
@@ -53,7 +53,7 @@ public final class BytecodeExpressionAssertions
     public static void assertBytecodeExpression(BytecodeExpression expression, Object expected, String expectedRendering, Optional<ClassLoader> parentClassLoader)
             throws Exception
     {
-        assertEquals(expression.toString(), expectedRendering);
+        assertThat(expression.toString()).isEqualTo(expectedRendering);
 
         assertBytecodeNode(expression.ret(), expression.getType(), expected, parentClassLoader);
     }
@@ -79,7 +79,7 @@ public final class BytecodeExpressionAssertions
     public static void assertBytecodeNode(BytecodeNode node, ParameterizedType returnType, Object expected, Optional<ClassLoader> parentClassLoader)
             throws Exception
     {
-        assertEquals(execute(context -> node, returnType, parentClassLoader), expected);
+        assertThat(execute(context -> node, returnType, parentClassLoader)).isEqualTo(expected);
     }
 
     public static void assertBytecodeNode(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Object expected)
@@ -91,7 +91,7 @@ public final class BytecodeExpressionAssertions
     public static void assertBytecodeNode(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Object expected, Optional<ClassLoader> parentClassLoader)
             throws Exception
     {
-        assertEquals(execute(nodeGenerator, returnType, parentClassLoader), expected);
+        assertThat(execute(nodeGenerator, returnType, parentClassLoader)).isEqualTo(expected);
     }
 
     public static Object execute(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Optional<ClassLoader> parentClassLoader)

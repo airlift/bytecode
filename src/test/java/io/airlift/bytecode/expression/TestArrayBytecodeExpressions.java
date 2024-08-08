@@ -18,8 +18,7 @@ import io.airlift.bytecode.ClassDefinition;
 import io.airlift.bytecode.DynamicClassLoader;
 import io.airlift.bytecode.MethodDefinition;
 import io.airlift.bytecode.Parameter;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,12 +46,10 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.newArray;
 public class TestArrayBytecodeExpressions
 {
     private final DynamicClassLoader classLoader = new DynamicClassLoader(TestArrayBytecodeExpressions.class.getClassLoader());
-    private static final ClassDefinition classDefinition = new ClassDefinition(a(PUBLIC, FINAL), "DummyClass", type(Object.class));
+    private final ClassDefinition classDefinition = new ClassDefinition(a(PUBLIC, FINAL), "DummyClass", type(Object.class));
     private final Map<Class<?>, MethodDefinition> typeMethodMap = new HashMap<>();
 
-    @BeforeClass
-    public void setUp()
-            throws Exception
+    TestArrayBytecodeExpressions()
     {
         for (Class<?> aClass : ImmutableList.of(boolean[].class, char[].class, float[].class, double[].class, byte[].class, short[].class, int[].class, long[].class, String[].class)) {
             MethodDefinition methodDefinition = defineSetAndGetMethod(aClass);
@@ -63,7 +60,7 @@ public class TestArrayBytecodeExpressions
     }
 
     @Test
-    public void testNewArray()
+    void testNewArray()
             throws Exception
     {
         assertBytecodeExpressionType(newArray(type(boolean[].class), 5), type(boolean[].class));
@@ -95,7 +92,7 @@ public class TestArrayBytecodeExpressions
     }
 
     @Test
-    public void testNewArrayPrefilled()
+    void testNewArrayPrefilled()
             throws Exception
     {
         assertBytecodeExpressionType(newArray(type(boolean[].class), ImmutableList.of(constantTrue(), constantFalse(), constantTrue())), type(boolean[].class));
@@ -124,7 +121,7 @@ public class TestArrayBytecodeExpressions
     }
 
     @Test
-    public void testSetElement()
+    void testSetElement()
             throws Exception
     {
         BytecodeExpression stringArray = constantString("foo bar baz").invoke("split", String[].class, constantString(" "));
@@ -143,14 +140,14 @@ public class TestArrayBytecodeExpressions
     }
 
     @Test
-    public void testGetElement()
+    void testGetElement()
             throws Exception
     {
         assertBytecodeExpression(constantString("abc").invoke("getBytes", byte[].class).getElement(1), "abc".getBytes()[1], "\"abc\".getBytes()[1]");
         assertBytecodeExpression(constantString("abc").invoke("getBytes", byte[].class).getElement(constantInt(1)), "abc".getBytes()[1], "\"abc\".getBytes()[1]");
     }
 
-    private static MethodDefinition defineSetAndGetMethod(Class<?> aClass)
+    private MethodDefinition defineSetAndGetMethod(Class<?> aClass)
     {
         Parameter arr = arg("arr", type(aClass));
         Parameter index = arg("index", type(int.class));

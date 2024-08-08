@@ -13,7 +13,7 @@
  */
 package io.airlift.bytecode.expression;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assertBytecodeExpression;
 import static io.airlift.bytecode.expression.BytecodeExpressions.add;
@@ -33,10 +33,10 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.shiftRight;
 import static io.airlift.bytecode.expression.BytecodeExpressions.shiftRightUnsigned;
 import static io.airlift.bytecode.expression.BytecodeExpressions.subtract;
 
-public class TestArithmeticBytecodeExpression
+class TestArithmeticBytecodeExpression
 {
     @Test
-    public void testAdd()
+    void testAdd()
             throws Exception
     {
         assertBytecodeExpression(add(constantInt(3), constantInt(7)), 3 + 7, "(3 + 7)");
@@ -46,7 +46,7 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testSubtract()
+    void testSubtract()
             throws Exception
     {
         assertBytecodeExpression(subtract(constantInt(3), constantInt(7)), 3 - 7, "(3 - 7)");
@@ -56,7 +56,7 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testMultiply()
+    void testMultiply()
             throws Exception
     {
         assertBytecodeExpression(multiply(constantInt(3), constantInt(7)), 3 * 7, "(3 * 7)");
@@ -66,7 +66,7 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testDivide()
+    void testDivide()
             throws Exception
     {
         assertBytecodeExpression(divide(constantInt(7), constantInt(3)), 7 / 3, "(7 / 3)");
@@ -76,7 +76,7 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testRemainder()
+    void testRemainder()
             throws Exception
     {
         assertBytecodeExpression(remainder(constantInt(7), constantInt(3)), 7 % 3, "(7 % 3)");
@@ -86,7 +86,7 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testShiftLeft()
+    void testShiftLeft()
             throws Exception
     {
         assertBytecodeExpression(shiftLeft(constantInt(7), constantInt(3)), 7 << 3, "(7 << 3)");
@@ -94,7 +94,7 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testShiftRight()
+    void testShiftRight()
             throws Exception
     {
         assertBytecodeExpression(shiftRight(constantInt(-7), constantInt(3)), -7 >> 3, "(-7 >> 3)");
@@ -102,7 +102,7 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testShiftRightUnsigned()
+    void testShiftRightUnsigned()
             throws Exception
     {
         assertBytecodeExpression(shiftRightUnsigned(constantInt(-7), constantInt(3)), -7 >>> 3, "(-7 >>> 3)");
@@ -110,7 +110,7 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testBitwiseAnd()
+    void testBitwiseAnd()
             throws Exception
     {
         assertBytecodeExpression(bitwiseAnd(constantInt(101), constantInt(37)), 101 & 37, "(101 & 37)");
@@ -118,7 +118,7 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testBitwiseOr()
+    void testBitwiseOr()
             throws Exception
     {
         assertBytecodeExpression(bitwiseOr(constantInt(101), constantInt(37)), 101 | 37, "(101 | 37)");
@@ -126,15 +126,16 @@ public class TestArithmeticBytecodeExpression
     }
 
     @Test
-    public void testBitwiseXor()
+    void testBitwiseXor()
             throws Exception
     {
         assertBytecodeExpression(bitwiseXor(constantInt(101), constantInt(37)), 101 ^ 37, "(101 ^ 37)");
         assertBytecodeExpression(bitwiseXor(constantLong(101), constantLong(37)), 101L ^ 37L, "(101L ^ 37L)");
     }
 
+    @SuppressWarnings("UnnecessaryUnaryMinus")
     @Test
-    public void testNegate()
+    void testNegate()
             throws Exception
     {
         assertBytecodeExpression(negate(constantInt(3)), -3, "-(3)");

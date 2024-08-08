@@ -13,7 +13,7 @@
  */
 package io.airlift.bytecode.expression;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assertBytecodeExpression;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantDouble;
@@ -28,10 +28,10 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.lessThan;
 import static io.airlift.bytecode.expression.BytecodeExpressions.lessThanOrEqual;
 import static io.airlift.bytecode.expression.BytecodeExpressions.notEqual;
 
-public class TestComparisonBytecodeExpression
+class TestComparisonBytecodeExpression
 {
     @Test
-    public void testLessThan()
+    void testLessThan()
             throws Exception
     {
         assertBytecodeExpression(lessThan(constantInt(3), constantInt(7)), 3 < 7, "(3 < 7)");
@@ -56,7 +56,7 @@ public class TestComparisonBytecodeExpression
     }
 
     @Test
-    public void testGreaterThan()
+    void testGreaterThan()
             throws Exception
     {
         assertBytecodeExpression(greaterThan(constantInt(3), constantInt(7)), 3 > 7, "(3 > 7)");
@@ -81,7 +81,7 @@ public class TestComparisonBytecodeExpression
     }
 
     @Test
-    public void testLessThanOrEqual()
+    void testLessThanOrEqual()
             throws Exception
     {
         assertBytecodeExpression(lessThanOrEqual(constantInt(3), constantInt(7)), 3 <= 7, "(3 <= 7)");
@@ -106,7 +106,7 @@ public class TestComparisonBytecodeExpression
     }
 
     @Test
-    public void testGreaterThanOrEqual()
+    void testGreaterThanOrEqual()
             throws Exception
     {
         assertBytecodeExpression(greaterThanOrEqual(constantInt(3), constantInt(7)), 3 >= 7, "(3 >= 7)");
@@ -132,7 +132,7 @@ public class TestComparisonBytecodeExpression
 
     @SuppressWarnings({"FloatingPointEquality", "ComparisonToNaN", "EqualsNaN", "EqualsWithItself"})
     @Test
-    public void testEqual()
+    void testEqual()
             throws Exception
     {
         assertBytecodeExpression(equal(constantInt(7), constantInt(3)), 7 == 3, "(7 == 3)");
@@ -159,7 +159,7 @@ public class TestComparisonBytecodeExpression
 
     @SuppressWarnings({"FloatingPointEquality", "ComparisonToNaN", "EqualsNaN", "EqualsWithItself"})
     @Test
-    public void testNotEqual()
+    void testNotEqual()
             throws Exception
     {
         assertBytecodeExpression(notEqual(constantInt(7), constantInt(3)), 7 != 3, "(7 != 3)");

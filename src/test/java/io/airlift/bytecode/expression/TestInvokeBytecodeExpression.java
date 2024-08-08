@@ -14,7 +14,7 @@
 package io.airlift.bytecode.expression;
 
 import com.google.common.collect.ImmutableList;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assertBytecodeExpression;
@@ -22,10 +22,11 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.constantDouble;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantString;
 import static io.airlift.bytecode.expression.BytecodeExpressions.invokeStatic;
 
-public class TestInvokeBytecodeExpression
+class TestInvokeBytecodeExpression
 {
+    @SuppressWarnings("CallToStringConcatCanBeReplacedByOperator")
     @Test
-    public void testInvokeMethod()
+    void testInvokeMethod()
             throws Exception
     {
         assertBytecodeExpression(constantString("foo").invoke("length", int.class), "foo".length(), "\"foo\".length()");
@@ -41,7 +42,7 @@ public class TestInvokeBytecodeExpression
     }
 
     @Test
-    public void testInvokeStaticMethod()
+    void testInvokeStaticMethod()
             throws Exception
     {
         assertBytecodeExpression(invokeStatic(System.class, "lineSeparator", String.class), System.lineSeparator(), "System.lineSeparator()");

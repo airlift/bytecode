@@ -14,12 +14,12 @@
 package io.airlift.bytecode.expression;
 
 import com.google.common.primitives.Primitives;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assertBytecodeExpression;
 import static io.airlift.bytecode.expression.BytecodeExpressions.getStatic;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestCastBytecodeExpression
 {
@@ -34,7 +34,7 @@ public class TestCastBytecodeExpression
     public static final double DOUBLE_FIELD = 4.4;
 
     @Test
-    public void testDownCastObject()
+    void testDownCastObject()
             throws Exception
     {
         assertBytecodeExpression(getStatic(getClass(), "OBJECT_FIELD").cast(String.class).invoke("length", int.class),
@@ -43,7 +43,7 @@ public class TestCastBytecodeExpression
     }
 
     @Test
-    public void testCastBetweenObjectAndPrimitive()
+    void testCastBetweenObjectAndPrimitive()
             throws Exception
     {
         assertCast(getStatic(getClass(), "INT_FIELD"), 33, Object.class);
@@ -51,7 +51,7 @@ public class TestCastBytecodeExpression
     }
 
     @Test
-    public void testInvalildCast()
+    void testInvalildCast()
     {
         // Cast between a boxed primitive and a primitive that are different
         assertInvalidCast(getStatic(getClass(), "INT_FIELD"), Double.class);
@@ -66,7 +66,7 @@ public class TestCastBytecodeExpression
     }
 
     @Test
-    public void testCastPrimitive()
+    void testCastPrimitive()
             throws Exception
     {
         assertPrimitiveCast("BOOLEAN_FIELD", boolean.class, BOOLEAN_FIELD);
@@ -128,7 +128,7 @@ public class TestCastBytecodeExpression
         assertPrimitiveCast("DOUBLE_FIELD", double.class, DOUBLE_FIELD);
     }
 
-    public void assertPrimitiveCast(String fieldName, Class<?> castToType, Object expected)
+    void assertPrimitiveCast(String fieldName, Class<?> castToType, Object expected)
             throws Exception
     {
         // simple cast
@@ -145,27 +145,21 @@ public class TestCastBytecodeExpression
         assertCast(baseExpression, expected, castToType);
     }
 
-    public static void assertCast(BytecodeExpression expression, Object expectedValue, Class<?> castToType)
+    static void assertCast(BytecodeExpression expression, Object expectedValue, Class<?> castToType)
             throws Exception
     {
         BytecodeExpression castExpression = expression.cast(castToType);
         assertBytecodeExpression(castExpression, expectedValue, expectedCastRendering(expression.toString(), castToType));
-        assertEquals(castExpression.getType().getJavaClassName(), castToType.getName());
+        assertThat(castExpression.getType().getJavaClassName()).isEqualTo(castToType.getName());
     }
 
-    public static void assertInvalidCast(BytecodeExpression expression, Class<?> castToType)
+    static void assertInvalidCast(BytecodeExpression expression, Class<?> castToType)
     {
-        try {
-            // Exception must be thrown here.
-            // An exception that is thrown at actual byte code generation time is too late. At that point, stack trace is generally not useful.
-            expression.cast(castToType);
-            fail();
-        }
-        catch (IllegalArgumentException ignored) {
-        }
+        assertThatThrownBy(() -> expression.cast(castToType))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
-    public static String expectedCastRendering(String expectedRendering, Class<?> castToType)
+    static String expectedCastRendering(String expectedRendering, Class<?> castToType)
     {
         return "((" + castToType.getSimpleName() + ") " + expectedRendering + ")";
     }

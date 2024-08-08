@@ -13,7 +13,7 @@
  */
 package io.airlift.bytecode.expression;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assertBytecodeExpression;
 import static io.airlift.bytecode.expression.BytecodeExpressions.and;
@@ -22,10 +22,11 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.constantTrue;
 import static io.airlift.bytecode.expression.BytecodeExpressions.not;
 import static io.airlift.bytecode.expression.BytecodeExpressions.or;
 
-public class TestLogicalBytecodeExpression
+class TestLogicalBytecodeExpression
 {
+    @SuppressWarnings("PointlessBooleanExpression")
     @Test
-    public void testAnd()
+    void testAnd()
             throws Exception
     {
         assertBytecodeExpression(and(constantTrue(), constantTrue()), true && true, "(true && true)");
@@ -34,8 +35,9 @@ public class TestLogicalBytecodeExpression
         assertBytecodeExpression(and(constantFalse(), constantFalse()), false && false, "(false && false)");
     }
 
+    @SuppressWarnings("PointlessBooleanExpression")
     @Test
-    public void testOr()
+    void testOr()
             throws Exception
     {
         assertBytecodeExpression(or(constantTrue(), constantTrue()), true || true, "(true || true)");
@@ -44,8 +46,9 @@ public class TestLogicalBytecodeExpression
         assertBytecodeExpression(or(constantFalse(), constantFalse()), false || false, "(false || false)");
     }
 
+    @SuppressWarnings("PointlessBooleanExpression")
     @Test
-    public void testNot()
+    void testNot()
             throws Exception
     {
         assertBytecodeExpression(not(constantTrue()), !true, "(!true)");

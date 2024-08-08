@@ -14,7 +14,7 @@
 package io.airlift.bytecode.expression;
 
 import com.google.common.collect.ImmutableList;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
@@ -22,10 +22,10 @@ import static io.airlift.bytecode.expression.BytecodeExpressionAssertions.assert
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantLong;
 import static io.airlift.bytecode.expression.BytecodeExpressions.newInstance;
 
-public class TestNewInstanceBytecodeExpression
+class TestNewInstanceBytecodeExpression
 {
     @Test
-    public void testNewInstance()
+    void testNewInstance()
             throws Exception
     {
         assertBytecodeExpression(newInstance(UUID.class, constantLong(3), constantLong(7)), new UUID(3L, 7L), "new UUID(3L, 7L)");

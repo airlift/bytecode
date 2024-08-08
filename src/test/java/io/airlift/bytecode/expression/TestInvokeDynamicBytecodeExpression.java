@@ -14,7 +14,7 @@
 package io.airlift.bytecode.expression;
 
 import com.google.common.collect.ImmutableList;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.lang.invoke.CallSite;
 import java.lang.invoke.ConstantCallSite;
@@ -30,7 +30,7 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.invokeDynamic;
 public class TestInvokeDynamicBytecodeExpression
 {
     @Test
-    public void testInvokeStaticMethod()
+    void testInvokeStaticMethod()
             throws Exception
     {
         assertBytecodeExpression(
@@ -39,6 +39,7 @@ public class TestInvokeDynamicBytecodeExpression
                 "[bootstrap(\"bar\")]=>foo(\"baz\")");
     }
 
+    @SuppressWarnings("WeakerAccess")
     public static final Method TEST_BOOTSTRAP_METHOD;
 
     static {

@@ -13,7 +13,7 @@
  */
 package io.airlift.bytecode.expression;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.awt.Point;
 
@@ -23,10 +23,10 @@ import static io.airlift.bytecode.expression.BytecodeExpressions.constantInt;
 import static io.airlift.bytecode.expression.BytecodeExpressions.getStatic;
 import static io.airlift.bytecode.expression.BytecodeExpressions.newInstance;
 
-public class TestGetFieldBytecodeExpression
+class TestGetFieldBytecodeExpression
 {
     @Test
-    public void testGetField()
+    void testGetField()
             throws Exception
     {
         assertBytecodeExpression(newInstance(Point.class, constantInt(3), constantInt(7)).getField("x", int.class), new Point(3, 7).x, "new Point(3, 7).x");
@@ -35,7 +35,7 @@ public class TestGetFieldBytecodeExpression
     }
 
     @Test
-    public void testGetStaticField()
+    void testGetStaticField()
             throws Exception
     {
         assertBytecodeExpression(getStatic(Long.class, "MIN_VALUE"), Long.MIN_VALUE, "Long.MIN_VALUE");

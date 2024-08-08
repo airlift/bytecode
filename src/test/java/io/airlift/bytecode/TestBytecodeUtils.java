@@ -13,19 +13,19 @@
  */
 package io.airlift.bytecode;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.airlift.bytecode.BytecodeUtils.toJavaIdentifierString;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class TestBytecodeUtils
+class TestBytecodeUtils
 {
     @Test
-    public void testToJavaIdentifierString()
+    void testToJavaIdentifierString()
     {
-        assertEquals(toJavaIdentifierString("HelloWorld"), "HelloWorld");
-        assertEquals(toJavaIdentifierString("Hello$World"), "Hello$World");
-        assertEquals(toJavaIdentifierString("Hello#World"), "Hello_World");
-        assertEquals(toJavaIdentifierString("A^B^C"), "A_B_C");
+        assertThat(toJavaIdentifierString("HelloWorld")).isEqualTo("HelloWorld");
+        assertThat(toJavaIdentifierString("Hello$World")).isEqualTo("Hello$World");
+        assertThat(toJavaIdentifierString("Hello#World")).isEqualTo("Hello_World");
+        assertThat(toJavaIdentifierString("A^B^C")).isEqualTo("A_B_C");
     }
 }

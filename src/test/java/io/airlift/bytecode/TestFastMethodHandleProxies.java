@@ -14,7 +14,7 @@
 package io.airlift.bytecode;
 
 import com.google.common.base.VerifyException;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandle;
@@ -28,19 +28,19 @@ import java.util.function.LongUnaryOperator;
 
 import static java.lang.invoke.MethodHandles.lookup;
 import static java.lang.invoke.MethodType.methodType;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testng.Assert.assertEquals;
 
-public class TestFastMethodHandleProxies
+class TestFastMethodHandleProxies
 {
     @Test
-    public void testBasic()
+    void testBasic()
             throws ReflectiveOperationException
     {
         assertInterface(
                 LongUnaryOperator.class,
                 lookup().findStatic(getClass(), "increment", methodType(long.class, long.class)),
-                addOne -> assertEquals(addOne.applyAsLong(1), 2L));
+                addOne -> assertThat(addOne.applyAsLong(1)).isEqualTo(2L));
     }
 
     private static long increment(long x)
@@ -49,13 +49,13 @@ public class TestFastMethodHandleProxies
     }
 
     @Test
-    public void testGeneric()
+    void testGeneric()
             throws ReflectiveOperationException
     {
         assertInterface(
                 LongFunction.class,
                 lookup().findStatic(getClass(), "incrementAndPrint", methodType(String.class, long.class)),
-                print -> assertEquals(print.apply(1), "2"));
+                print -> assertThat(print.apply(1)).isEqualTo("2"));
     }
 
     private static String incrementAndPrint(long x)
@@ -64,15 +64,15 @@ public class TestFastMethodHandleProxies
     }
 
     @Test
-    public void testObjectAndDefaultMethods()
+    void testObjectAndDefaultMethods()
             throws ReflectiveOperationException
     {
         assertInterface(
                 StringLength.class,
                 lookup().findStatic(getClass(), "stringLength", methodType(int.class, String.class)),
                 length -> {
-                    assertEquals(length.length("abc"), 3);
-                    assertEquals(length.theAnswer(), 42);
+                    assertThat(length.length("abc")).isEqualTo(3);
+                    assertThat(length.theAnswer()).isEqualTo(42);
                 });
     }
 
@@ -95,7 +95,7 @@ public class TestFastMethodHandleProxies
     }
 
     @Test
-    public void testUncheckedException()
+    void testUncheckedException()
             throws ReflectiveOperationException
     {
         assertInterface(
@@ -111,7 +111,7 @@ public class TestFastMethodHandleProxies
     }
 
     @Test
-    public void testCheckedException()
+    void testCheckedException()
             throws ReflectiveOperationException
     {
         assertInterface(
@@ -129,7 +129,7 @@ public class TestFastMethodHandleProxies
     }
 
     @Test
-    public void testMutableCallSite()
+    void testMutableCallSite()
             throws ReflectiveOperationException
     {
         MethodHandle one = lookup().findStatic(getClass(), "one", methodType(int.class));
@@ -141,9 +141,9 @@ public class TestFastMethodHandleProxies
                 callSite.dynamicInvoker(),
                 supplier -> {
                     callSite.setTarget(one);
-                    assertEquals(supplier.getAsInt(), 1);
+                    assertThat(supplier.getAsInt()).isEqualTo(1);
                     callSite.setTarget(two);
-                    assertEquals(supplier.getAsInt(), 2);
+                    assertThat(supplier.getAsInt()).isEqualTo(2);
                 });
     }
 
