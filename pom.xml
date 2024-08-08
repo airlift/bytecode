@@ -31,7 +31,7 @@
         <project.build.targetJdk>17</project.build.targetJdk>
         <air.modernizer.java-version>8</air.modernizer.java-version>
 
-        <dep.asm.version>9.4</dep.asm.version>
+        <dep.asm.version>9.7</dep.asm.version>
     </properties>
 
     <dependencies>
