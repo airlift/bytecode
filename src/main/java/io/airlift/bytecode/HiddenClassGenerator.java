@@ -77,7 +77,7 @@ public class HiddenClassGenerator
                 definedClassLookup = lookup.defineHiddenClass(bytecode, true);
             }
             else {
-                definedClassLookup = lookup.defineHiddenClassWithClassData(bytecode, classData.get(), true);
+                definedClassLookup = lookup.defineHiddenClassWithClassData(bytecode, classData.orElseThrow(), true);
             }
         }
         catch (IllegalAccessException e) {

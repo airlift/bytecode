@@ -28,8 +28,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import static com.google.common.io.CharStreams.nullWriter;
 import static io.airlift.bytecode.ParameterizedType.typeFromJavaClassName;
+import static java.io.Writer.nullWriter;
 import static java.nio.file.Files.createDirectories;
 import static java.util.Objects.requireNonNull;
 
