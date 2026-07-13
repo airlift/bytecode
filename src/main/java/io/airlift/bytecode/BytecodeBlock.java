@@ -93,7 +93,7 @@ public class BytecodeBlock
 
     public BytecodeBlock comment(String comment, Object... args)
     {
-        nodes.add(new Comment(String.format(comment, args)));
+        nodes.add(new Comment(comment.formatted(args)));
         return this;
     }
 
@@ -484,7 +484,8 @@ public class BytecodeBlock
         return this;
     }
 
-    public BytecodeNode invokeDynamic(String name,
+    public BytecodeNode invokeDynamic(
+            String name,
             ParameterizedType returnType,
             Iterable<ParameterizedType> parameterTypes,
             Method bootstrapMethod,
@@ -818,24 +819,11 @@ public class BytecodeBlock
         ParameterizedType type = variable.getType();
         if (type.getType().length() == 1) {
             switch (type.getType().charAt(0)) {
-                case 'B':
-                case 'Z':
-                case 'S':
-                case 'C':
-                case 'I':
-                    nodes.add(loadInt(0));
-                    break;
-                case 'F':
-                    nodes.add(loadFloat(0));
-                    break;
-                case 'D':
-                    nodes.add(loadDouble(0));
-                    break;
-                case 'J':
-                    nodes.add(loadLong(0));
-                    break;
-                default:
-                    checkArgument(false, "Unknown type '%s'", variable.getType());
+                case 'B', 'Z', 'S', 'C', 'I' -> nodes.add(loadInt(0));
+                case 'F' -> nodes.add(loadFloat(0));
+                case 'D' -> nodes.add(loadDouble(0));
+                case 'J' -> nodes.add(loadLong(0));
+                default -> checkArgument(false, "Unknown type '%s'", variable.getType());
             }
         }
         else {

@@ -161,7 +161,8 @@ public abstract class BytecodeExpression
     {
         requireNonNull(parameters, "parameters is null");
 
-        return invoke(methodName,
+        return invoke(
+                methodName,
                 returnType,
                 Streams.stream(parameters).map(BytecodeExpression::getType).collect(toImmutableList()),
                 parameters);

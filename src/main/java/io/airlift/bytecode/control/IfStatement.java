@@ -43,7 +43,7 @@ public class IfStatement
 
     public IfStatement(String format, Object... args)
     {
-        this.comment = String.format(format, args);
+        this.comment = format.formatted(args);
     }
 
     @Override

@@ -119,8 +119,8 @@ public class TryCatch
     public List<BytecodeNode> getChildNodes()
     {
         return Stream.concat(
-                Stream.of(tryNode),
-                catchBlocks.stream().map(CatchBlock::getHandler))
+                        Stream.of(tryNode),
+                        catchBlocks.stream().map(CatchBlock::getHandler))
                 .collect(toImmutableList());
     }
 

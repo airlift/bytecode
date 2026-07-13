@@ -16,6 +16,4 @@ package io.airlift.bytecode.debug;
 import io.airlift.bytecode.BytecodeNode;
 
 public interface DebugNode
-        extends BytecodeNode
-{
-}
+        extends BytecodeNode {}

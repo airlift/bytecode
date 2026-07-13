@@ -42,7 +42,8 @@ public class LocalVariableNode
     @Override
     public void accept(MethodVisitor visitor, MethodGenerationContext generationContext)
     {
-        visitor.visitLocalVariable(variable.getName(),
+        visitor.visitLocalVariable(
+                variable.getName(),
                 variable.getType().getType(),
                 variable.getType().getGenericSignature(),
                 start.getLabel(),
