@@ -19,8 +19,7 @@ import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.MethodGenerationContext;
 import io.airlift.bytecode.ParameterizedType;
 import io.airlift.bytecode.instruction.TypeInstruction;
-
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 
 import java.util.List;
 

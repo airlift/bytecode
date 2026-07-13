@@ -15,10 +15,10 @@ package io.airlift.bytecode;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.errorprone.annotations.Immutable;
+import com.google.errorprone.annotations.concurrent.LazyInit;
+import jakarta.annotation.Nullable;
 import org.objectweb.asm.Type;
-
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.Immutable;
 
 import java.util.List;
 import java.util.Map;
@@ -112,8 +112,10 @@ public class ParameterizedType
     private final ParameterizedType arrayComponentType;
 
     // caches of deterministic computations; the benign race is harmless
+    @LazyInit
     @Nullable
     private String javaClassName;
+    @LazyInit
     @Nullable
     private String genericSignature;
 

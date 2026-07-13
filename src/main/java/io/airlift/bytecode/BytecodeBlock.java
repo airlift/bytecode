@@ -23,8 +23,6 @@ import io.airlift.bytecode.instruction.TypeInstruction;
 import io.airlift.bytecode.instruction.VariableInstruction;
 import org.objectweb.asm.MethodVisitor;
 
-import javax.annotation.concurrent.NotThreadSafe;
-
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -53,7 +51,6 @@ import static io.airlift.bytecode.instruction.VariableInstruction.loadVariable;
 import static io.airlift.bytecode.instruction.VariableInstruction.storeVariable;
 
 @SuppressWarnings("UnusedDeclaration")
-@NotThreadSafe
 public class BytecodeBlock
         implements BytecodeNode
 {
