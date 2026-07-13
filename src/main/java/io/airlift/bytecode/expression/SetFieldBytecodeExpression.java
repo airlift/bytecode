@@ -19,8 +19,7 @@ import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.FieldDefinition;
 import io.airlift.bytecode.MethodGenerationContext;
 import io.airlift.bytecode.ParameterizedType;
-
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;

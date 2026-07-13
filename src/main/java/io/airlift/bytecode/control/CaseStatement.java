@@ -13,10 +13,9 @@
  */
 package io.airlift.bytecode.control;
 
+import com.google.errorprone.annotations.Immutable;
 import io.airlift.bytecode.BytecodeNode;
 import io.airlift.bytecode.instruction.LabelNode;
-
-import javax.annotation.concurrent.Immutable;
 
 import java.util.Objects;
 
