@@ -21,6 +21,7 @@ import static io.airlift.bytecode.Access.PUBLIC;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.a;
 import static io.airlift.bytecode.BytecodeUtils.estimateMaxCodeSize;
+import static io.airlift.bytecode.BytecodeUtils.isJitCompilable;
 import static io.airlift.bytecode.BytecodeUtils.toJavaIdentifierString;
 import static io.airlift.bytecode.Parameter.arg;
 import static io.airlift.bytecode.ParameterizedType.type;
@@ -100,5 +101,41 @@ class TestBytecodeUtils
                 ImmutableList.of());
         method.getBody().push(0).pop().ret();
         assertThat(estimateMaxCodeSize(method)).isEqualTo(3);
+    }
+
+    @Test
+    void testIsJitCompilable()
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "test/JitCompilable",
+                type(Object.class));
+
+        // 3999 push/pop pairs plus NOP and RETURN generate exactly 8000 bytes, the HugeMethodLimit
+        MethodDefinition atLimit = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "atLimit",
+                type(void.class),
+                ImmutableList.of());
+        BytecodeBlock atLimitBody = atLimit.getBody();
+        for (int i = 0; i < 3_999; i++) {
+            atLimitBody.push(0).pop();
+        }
+        atLimitBody.append(OpCode.NOP);
+        atLimitBody.ret();
+        assertThat(isJitCompilable(atLimitBody, atLimit.getScope())).isTrue();
+
+        // 4000 push/pop pairs plus RETURN generate 8001 bytes, one over the limit
+        MethodDefinition overLimit = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "overLimit",
+                type(void.class),
+                ImmutableList.of());
+        BytecodeBlock overLimitBody = overLimit.getBody();
+        for (int i = 0; i < 4_000; i++) {
+            overLimitBody.push(0).pop();
+        }
+        overLimitBody.ret();
+        assertThat(isJitCompilable(overLimitBody, overLimit.getScope())).isFalse();
     }
 }
