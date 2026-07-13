@@ -15,7 +15,6 @@ package io.airlift.bytecode;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
 import org.objectweb.asm.ClassVisitor;
@@ -73,7 +72,18 @@ public class MethodDefinition
             ParameterizedType returnType,
             Iterable<Parameter> parameters)
     {
-        checkArgument(Iterables.size(parameters) <= 254, "Too many parameters for method");
+        // JVMS 4.3.3: at most 255 parameter slots, where long and double take
+        // two slots and instance methods use one slot for "this"
+        int parameterSlots = Streams.stream(parameters)
+                .mapToInt(parameter -> {
+                    String descriptor = parameter.getType().getType();
+                    return descriptor.equals("J") || descriptor.equals("D") ? 2 : 1;
+                })
+                .sum();
+        if (!access.contains(STATIC)) {
+            parameterSlots++;
+        }
+        checkArgument(parameterSlots <= 255, "Too many parameters for method: %s slots used, at most 255 allowed", parameterSlots);
 
         this.declaringClass = declaringClass;
         body = new BytecodeBlock();
