@@ -177,7 +177,7 @@ public class MethodDefinition
     public BytecodeBlock getBody()
     {
         if (declaringClass.isInterface()) {
-            throw new IllegalAccessError("Interface does not have method body");
+            throw new IllegalStateException("Interface does not have method body");
         }
         return body;
     }

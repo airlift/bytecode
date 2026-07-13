@@ -216,7 +216,7 @@ public class ClassDefinition
     public MethodDefinition getClassInitializer()
     {
         if (isInterface()) {
-            throw new IllegalAccessError("Interface does not have class initializer");
+            throw new IllegalStateException("Interface does not have class initializer");
         }
         return classInitializer;
     }
