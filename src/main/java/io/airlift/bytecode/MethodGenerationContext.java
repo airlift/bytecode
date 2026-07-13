@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.debug.LocalVariableNode;
 import io.airlift.bytecode.instruction.LabelNode;
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Type;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -59,7 +58,7 @@ public class MethodGenerationContext
         for (Variable variable : scopeContext.getVariables()) {
             checkArgument(!"this".equals(variable.getName()) || nextSlot == 0, "The 'this' variable must be in slot 0");
             variableSlots.put(variable, nextSlot);
-            nextSlot += Type.getType(variable.getType().getType()).getSize();
+            nextSlot += variable.getType().getSlotSize();
         }
 
         scopeContext.getStartLabel().accept(methodVisitor, this);

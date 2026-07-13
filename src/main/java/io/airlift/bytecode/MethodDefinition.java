@@ -75,10 +75,7 @@ public class MethodDefinition
         // JVMS 4.3.3: at most 255 parameter slots, where long and double take
         // two slots and instance methods use one slot for "this"
         int parameterSlots = Streams.stream(parameters)
-                .mapToInt(parameter -> {
-                    String descriptor = parameter.getType().getType();
-                    return descriptor.equals("J") || descriptor.equals("D") ? 2 : 1;
-                })
+                .mapToInt(parameter -> parameter.getType().getSlotSize())
                 .sum();
         if (!access.contains(STATIC)) {
             parameterSlots++;

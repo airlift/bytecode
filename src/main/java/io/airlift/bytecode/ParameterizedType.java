@@ -261,6 +261,22 @@ public class ParameterizedType
         return primitiveType != null;
     }
 
+    /**
+     * Number of local variable or operand stack slots a value of this type
+     * occupies: 2 for {@code long} and {@code double}, 0 for {@code void},
+     * and 1 otherwise.
+     */
+    public int getSlotSize()
+    {
+        if (primitiveType == long.class || primitiveType == double.class) {
+            return 2;
+        }
+        if (primitiveType == void.class) {
+            return 0;
+        }
+        return 1;
+    }
+
     @Nullable
     public ParameterizedType getArrayComponentType()
     {
