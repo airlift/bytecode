@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.Map;
 
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
@@ -30,11 +31,46 @@ import static io.airlift.bytecode.ClassGenerator.classGenerator;
 import static io.airlift.bytecode.Parameter.arg;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.BytecodeExpressions.add;
+import static io.airlift.bytecode.expression.BytecodeExpressions.newInstance;
 import static java.nio.file.Files.createTempDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TestClassGenerator
 {
+    @Test
+    void testDefineClasses()
+            throws Exception
+    {
+        ClassDefinition first = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "test/First",
+                type(Object.class));
+        first.declareDefaultConstructor(a(PUBLIC));
+
+        ClassDefinition second = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "test/Second",
+                type(Object.class));
+        second.declareDefaultConstructor(a(PUBLIC));
+
+        // the classes reference each other, so they can only be generated together
+        first.declareMethod(a(PUBLIC, STATIC), "createSecond", second.getType())
+                .getBody()
+                .append(newInstance(second.getType()).ret());
+        second.declareMethod(a(PUBLIC, STATIC), "createFirst", first.getType())
+                .getBody()
+                .append(newInstance(first.getType()).ret());
+
+        Map<String, Class<?>> classes = classGenerator(getClass().getClassLoader())
+                .defineClasses(ImmutableList.of(first, second));
+
+        assertThat(classes).containsOnlyKeys("test.First", "test.Second");
+        assertThat(classes.get("test.First").getMethod("createSecond").invoke(null))
+                .isInstanceOf(classes.get("test.Second"));
+        assertThat(classes.get("test.Second").getMethod("createFirst").invoke(null))
+                .isInstanceOf(classes.get("test.First"));
+    }
+
     @Test
     void testGenerator()
             throws Exception
