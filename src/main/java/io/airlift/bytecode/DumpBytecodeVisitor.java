@@ -196,8 +196,7 @@ public class DumpBytecodeVisitor
     private void visitBlockContents(BytecodeBlock block)
     {
         for (BytecodeNode node : block.getChildNodes()) {
-            if (node instanceof BytecodeBlock) {
-                BytecodeBlock childBlock = (BytecodeBlock) node;
+            if (node instanceof BytecodeBlock childBlock) {
                 if (childBlock.getDescription() != null) {
                     visitBlock(block, childBlock);
                 }

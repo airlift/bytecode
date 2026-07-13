@@ -97,25 +97,15 @@ public final class BytecodeExpressions
 
     public static BytecodeExpression constantNumber(Number value)
     {
-        if (value instanceof Byte) {
-            return constantInt((value).intValue()).cast(byte.class);
-        }
-        if (value instanceof Short) {
-            return constantInt((value).intValue()).cast(short.class);
-        }
-        if (value instanceof Integer) {
-            return constantInt((Integer) value);
-        }
-        if (value instanceof Long) {
-            return constantLong((Long) value);
-        }
-        if (value instanceof Float) {
-            return constantFloat((Float) value);
-        }
-        if (value instanceof Double) {
-            return constantDouble((Double) value);
-        }
-        throw new IllegalArgumentException("Unsupported number type: " + value.getClass().getName());
+        return switch (value) {
+            case Byte byteValue -> constantInt(byteValue.intValue()).cast(byte.class);
+            case Short shortValue -> constantInt(shortValue.intValue()).cast(short.class);
+            case Integer integerValue -> constantInt(integerValue);
+            case Long longValue -> constantLong(longValue);
+            case Float floatValue -> constantFloat(floatValue);
+            case Double doubleValue -> constantDouble(doubleValue);
+            default -> throw new IllegalArgumentException("Unsupported number type: " + value.getClass().getName());
+        };
     }
 
     public static BytecodeExpression constantNull(Class<?> type)
