@@ -13,7 +13,7 @@
  */
 package io.airlift.bytecode;
 
-import javax.annotation.concurrent.Immutable;
+import com.google.errorprone.annotations.Immutable;
 
 @Immutable
 public class Parameter
