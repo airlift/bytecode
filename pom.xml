@@ -60,6 +60,12 @@
 
         <dependency>
             <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-commons</artifactId>
+            <version>${dep.asm.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
             <artifactId>asm-tree</artifactId>
             <version>${dep.asm.version}</version>
         </dependency>
