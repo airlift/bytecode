@@ -21,6 +21,9 @@ import static io.airlift.bytecode.Access.PUBLIC;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.a;
 import static io.airlift.bytecode.BytecodeUtils.estimateMaxCodeSize;
+import static io.airlift.bytecode.BytecodeUtils.fitsMethodSizeLimit;
+import static io.airlift.bytecode.BytecodeUtils.isInlineable;
+import static io.airlift.bytecode.BytecodeUtils.isInlineableWhenHot;
 import static io.airlift.bytecode.BytecodeUtils.isJitCompilable;
 import static io.airlift.bytecode.BytecodeUtils.toJavaIdentifierString;
 import static io.airlift.bytecode.Parameter.arg;
@@ -108,5 +111,89 @@ class TestBytecodeUtils
             overLimitBody.push(0).pop();
         }
         assertThat(isJitCompilable(overLimitBody, overLimit.getScope())).isFalse();
+    }
+
+    @Test
+    void testFitsMethodSizeLimit()
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "test/MethodSizeLimit",
+                type(Object.class));
+
+        // 32767 push/pop pairs plus RETURN generate exactly 65535 bytes, the JVM limit
+        MethodDefinition atLimit = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "atLimit",
+                type(void.class),
+                ImmutableList.of());
+        BytecodeBlock atLimitBody = atLimit.getBody();
+        for (int i = 0; i < 32_767; i++) {
+            atLimitBody.push(0).pop();
+        }
+        atLimitBody.ret();
+        assertThat(fitsMethodSizeLimit(atLimitBody, atLimit.getScope())).isTrue();
+
+        MethodDefinition overLimit = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "overLimit",
+                type(void.class),
+                ImmutableList.of());
+        BytecodeBlock overLimitBody = overLimit.getBody();
+        for (int i = 0; i < 32_768; i++) {
+            overLimitBody.push(0).pop();
+        }
+        overLimitBody.ret();
+        assertThat(fitsMethodSizeLimit(overLimitBody, overLimit.getScope())).isFalse();
+    }
+
+    @Test
+    void testIsInlineable()
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "test/Inlineable",
+                type(Object.class));
+
+        // 17 push/pop pairs plus RETURN generate exactly 35 bytes, the MaxInlineSize
+        MethodDefinition small = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "small",
+                type(void.class),
+                ImmutableList.of());
+        BytecodeBlock smallBody = small.getBody();
+        for (int i = 0; i < 17; i++) {
+            smallBody.push(0).pop();
+        }
+        smallBody.ret();
+        assertThat(isInlineable(smallBody, small.getScope())).isTrue();
+        assertThat(isInlineableWhenHot(smallBody, small.getScope())).isTrue();
+
+        // 162 push/pop pairs plus RETURN generate exactly 325 bytes, the FreqInlineSize
+        MethodDefinition medium = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "medium",
+                type(void.class),
+                ImmutableList.of());
+        BytecodeBlock mediumBody = medium.getBody();
+        for (int i = 0; i < 162; i++) {
+            mediumBody.push(0).pop();
+        }
+        mediumBody.ret();
+        assertThat(isInlineable(mediumBody, medium.getScope())).isFalse();
+        assertThat(isInlineableWhenHot(mediumBody, medium.getScope())).isTrue();
+
+        MethodDefinition large = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "large",
+                type(void.class),
+                ImmutableList.of());
+        BytecodeBlock largeBody = large.getBody();
+        for (int i = 0; i < 163; i++) {
+            largeBody.push(0).pop();
+        }
+        largeBody.ret();
+        assertThat(isInlineable(largeBody, large.getScope())).isFalse();
+        assertThat(isInlineableWhenHot(largeBody, large.getScope())).isFalse();
     }
 }
