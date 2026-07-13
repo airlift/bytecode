@@ -14,12 +14,10 @@
 package io.airlift.bytecode;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.airlift.bytecode.instruction.InstructionNode;
 import org.objectweb.asm.MethodVisitor;
 
 import java.util.List;
-import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -230,19 +228,22 @@ public enum OpCode
     GOTO_W(200),
     JSR_W(201);
 
-    private static final Map<Integer, OpCode> OP_CODE_INDEX;
+    private static final OpCode[] OP_CODE_INDEX;
 
     static {
-        ImmutableMap.Builder<Integer, OpCode> builder = ImmutableMap.builder();
+        OpCode[] index = new OpCode[256];
         for (OpCode opCode : OpCode.values()) {
-            builder.put(opCode.getOpCode(), opCode);
+            index[opCode.getOpCode()] = opCode;
         }
-        OP_CODE_INDEX = builder.build();
+        OP_CODE_INDEX = index;
     }
 
     public static OpCode getOpCode(int opCode)
     {
-        OpCode value = OP_CODE_INDEX.get(opCode);
+        OpCode value = null;
+        if (opCode >= 0 && opCode < OP_CODE_INDEX.length) {
+            value = OP_CODE_INDEX[opCode];
+        }
         checkArgument(value != null, "Unknown opCode %s", opCode);
         return value;
     }
