@@ -30,7 +30,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.instruction.FieldInstruction.getStaticInstruction;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 class GetFieldBytecodeExpression
@@ -114,7 +113,7 @@ class GetFieldBytecodeExpression
             return declaringClass.getField(name);
         }
         catch (NoSuchFieldException e) {
-            throw new IllegalArgumentException(format("Class %s does not have a '%s' field", declaringClass.getName(), name));
+            throw new IllegalArgumentException("Class %s does not have a '%s' field".formatted(declaringClass.getName(), name));
         }
     }
 }

@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode.expression;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.BytecodeBlock;
 import io.airlift.bytecode.BytecodeNode;
@@ -29,6 +28,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.bytecode.ArrayOpCode.getArrayOpCode;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantInt;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
 class NewArrayBytecodeExpression
         extends BytecodeExpression
@@ -97,7 +97,7 @@ class NewArrayBytecodeExpression
         if (elements == null) {
             return "new " + elementType.getSimpleName() + "[" + length + "]";
         }
-        return "new " + elementType.getSimpleName() + "[] {" + Joiner.on(", ").join(elements) + "}";
+        return "new " + elementType.getSimpleName() + "[] {" + elements.stream().map(Object::toString).collect(joining(", ")) + "}";
     }
 
     @Override

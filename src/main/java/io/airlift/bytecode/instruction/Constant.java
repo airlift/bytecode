@@ -312,30 +312,14 @@ public abstract class Constant
         {
             if (value <= Byte.MAX_VALUE && value >= Byte.MIN_VALUE) {
                 switch (value) {
-                    case -1:
-                        visitor.visitInsn(ICONST_M1.getOpCode());
-                        break;
-                    case 0:
-                        visitor.visitInsn(ICONST_0.getOpCode());
-                        break;
-                    case 1:
-                        visitor.visitInsn(ICONST_1.getOpCode());
-                        break;
-                    case 2:
-                        visitor.visitInsn(ICONST_2.getOpCode());
-                        break;
-                    case 3:
-                        visitor.visitInsn(ICONST_3.getOpCode());
-                        break;
-                    case 4:
-                        visitor.visitInsn(ICONST_4.getOpCode());
-                        break;
-                    case 5:
-                        visitor.visitInsn(ICONST_5.getOpCode());
-                        break;
-                    default:
-                        visitor.visitIntInsn(BIPUSH.getOpCode(), value);
-                        break;
+                    case -1 -> visitor.visitInsn(ICONST_M1.getOpCode());
+                    case 0 -> visitor.visitInsn(ICONST_0.getOpCode());
+                    case 1 -> visitor.visitInsn(ICONST_1.getOpCode());
+                    case 2 -> visitor.visitInsn(ICONST_2.getOpCode());
+                    case 3 -> visitor.visitInsn(ICONST_3.getOpCode());
+                    case 4 -> visitor.visitInsn(ICONST_4.getOpCode());
+                    case 5 -> visitor.visitInsn(ICONST_5.getOpCode());
+                    default -> visitor.visitIntInsn(BIPUSH.getOpCode(), value);
                 }
             }
             else if (value <= Short.MAX_VALUE && value >= Short.MIN_VALUE) {

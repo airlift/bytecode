@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode.expression;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.BytecodeBlock;
 import io.airlift.bytecode.BytecodeNode;
@@ -26,6 +25,7 @@ import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
 class InvokeBytecodeExpression
         extends BytecodeExpression
@@ -99,10 +99,10 @@ class InvokeBytecodeExpression
     protected String formatOneLine()
     {
         if (instance == null) {
-            return methodTargetType.getSimpleName() + "." + methodName + "(" + Joiner.on(", ").join(parameters) + ")";
+            return methodTargetType.getSimpleName() + "." + methodName + "(" + parameters.stream().map(Object::toString).collect(joining(", ")) + ")";
         }
 
-        return instance + "." + methodName + "(" + Joiner.on(", ").join(parameters) + ")";
+        return instance + "." + methodName + "(" + parameters.stream().map(Object::toString).collect(joining(", ")) + ")";
     }
 
     @Override

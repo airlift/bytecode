@@ -13,8 +13,6 @@
  */
 package io.airlift.bytecode;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
 import io.airlift.bytecode.control.CaseStatement;
 import io.airlift.bytecode.control.DoWhileLoop;
 import io.airlift.bytecode.control.ForLoop;
@@ -55,7 +53,6 @@ import java.util.List;
 
 import static io.airlift.bytecode.Access.INTERFACE;
 import static io.airlift.bytecode.ParameterizedType.type;
-import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 
 public class DumpBytecodeVisitor
@@ -279,7 +276,8 @@ public class DumpBytecodeVisitor
     @Override
     public Void visitInvoke(BytecodeNode parent, InvokeInstruction invokeInstruction)
     {
-        printLine("invoke %s.%s%s",
+        printLine(
+                "invoke %s.%s%s",
                 invokeInstruction.getTarget().getJavaClassName(),
                 invokeInstruction.getName(),
                 invokeInstruction.getMethodDescription());
@@ -289,7 +287,8 @@ public class DumpBytecodeVisitor
     @Override
     public Void visitInvokeDynamic(BytecodeNode parent, InvokeDynamicInstruction invokeDynamicInstruction)
     {
-        printLine("invokeDynamic %s%s %s",
+        printLine(
+                "invokeDynamic %s%s %s",
                 invokeDynamicInstruction.getName(),
                 invokeDynamicInstruction.getMethodDescription(),
                 invokeDynamicInstruction.getBootstrapArguments());
@@ -409,7 +408,7 @@ public class DumpBytecodeVisitor
         indentLevel++;
         visitNestedNode("expression", switchStatement.expression(), switchStatement);
         for (CaseStatement caseStatement : switchStatement.cases()) {
-            visitNestedNode(format("case %s:", caseStatement.getKey()), caseStatement.getBody(), switchStatement);
+            visitNestedNode("case %s:".formatted(caseStatement.getKey()), caseStatement.getBody(), switchStatement);
         }
         if (switchStatement.getDefaultBody() != null) {
             visitNestedNode("default:", switchStatement.getDefaultBody(), switchStatement);
@@ -553,24 +552,24 @@ public class DumpBytecodeVisitor
 
     public void printLine(String line)
     {
-        out.println(format("%s%s", indent(indentLevel), line));
+        out.println("%s%s".formatted(indent(indentLevel), line));
     }
 
     public void printLine(String format, Object... args)
     {
-        String line = format(format, args);
-        out.println(format("%s%s", indent(indentLevel), line));
+        String line = format.formatted(args);
+        out.println("%s%s".formatted(indent(indentLevel), line));
     }
 
     public void printWords(String... words)
     {
-        String line = Joiner.on(" ").join(words);
-        out.println(format("%s%s", indent(indentLevel), line));
+        String line = String.join(" ", words);
+        out.println("%s%s".formatted(indent(indentLevel), line));
     }
 
     private String indent(int level)
     {
-        return Strings.repeat("    ", level);
+        return "    ".repeat(level);
     }
 
     private void visitNestedNode(String description, BytecodeNode node, BytecodeNode parent)
@@ -621,13 +620,13 @@ public class DumpBytecodeVisitor
 
         public void print()
         {
-            printLine(Joiner.on(separator).join(parts));
+            printLine(parts.stream().map(Object::toString).collect(joining(separator)));
         }
 
         @Override
         public String toString()
         {
-            return Joiner.on(separator).join(parts);
+            return parts.stream().map(Object::toString).collect(joining(separator));
         }
     }
 }

@@ -29,7 +29,6 @@ import java.util.List;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.ParameterizedType.type;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 class SetFieldBytecodeExpression
@@ -75,7 +74,8 @@ class SetFieldBytecodeExpression
         this(instance, declaringClass, name, value, value.getType());
     }
 
-    public SetFieldBytecodeExpression(@Nullable BytecodeExpression instance,
+    public SetFieldBytecodeExpression(
+            @Nullable BytecodeExpression instance,
             ParameterizedType declaringClass,
             String name,
             BytecodeExpression value,
@@ -138,7 +138,7 @@ class SetFieldBytecodeExpression
             return declaringClass.getField(name);
         }
         catch (NoSuchFieldException e) {
-            throw new IllegalArgumentException(format("Class %s does not have a '%s' field", declaringClass.getName(), name));
+            throw new IllegalArgumentException("Class %s does not have a '%s' field".formatted(declaringClass.getName(), name));
         }
     }
 }

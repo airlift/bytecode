@@ -92,7 +92,8 @@ public class FieldDefinition
 
     public void visit(ClassVisitor visitor)
     {
-        FieldVisitor fieldVisitor = visitor.visitField(toAccessModifier(access),
+        FieldVisitor fieldVisitor = visitor.visitField(
+                toAccessModifier(access),
                 name,
                 type.getType(),
                 type.getGenericSignature(),
