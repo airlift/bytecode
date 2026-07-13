@@ -50,7 +50,6 @@ import static io.airlift.bytecode.instruction.TypeInstruction.instanceOf;
 import static io.airlift.bytecode.instruction.VariableInstruction.loadVariable;
 import static io.airlift.bytecode.instruction.VariableInstruction.storeVariable;
 
-@SuppressWarnings("UnusedDeclaration")
 public class BytecodeBlock
         implements BytecodeNode
 {
