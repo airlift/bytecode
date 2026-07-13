@@ -60,6 +60,8 @@ import static java.util.Objects.requireNonNull;
  */
 public class ClassInfo
 {
+    private static final ParameterizedType OBJECT_TYPE = type(Object.class);
+
     private final ClassInfoLoader loader;
     private final ParameterizedType type;
     private final int access;
@@ -184,7 +186,7 @@ public class ClassInfo
             return true;
         }
 
-        if (that.isInterface() && getType().equals(type(Object.class))) {
+        if (that.isInterface() && getType().equals(OBJECT_TYPE)) {
             return true;
         }
 
