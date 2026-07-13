@@ -19,6 +19,8 @@ import io.airlift.bytecode.MethodDefinition;
 import io.airlift.bytecode.OpCode;
 import io.airlift.bytecode.ParameterizedType;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -44,6 +46,22 @@ import static java.util.Objects.requireNonNull;
 
 public final class BytecodeExpressions
 {
+    // condy name required by the MethodHandles.classData bootstraps (ConstantDescs.DEFAULT_NAME)
+    private static final String DEFAULT_NAME = "_";
+
+    private static final Method CLASS_DATA_BOOTSTRAP;
+    private static final Method CLASS_DATA_AT_BOOTSTRAP;
+
+    static {
+        try {
+            CLASS_DATA_BOOTSTRAP = MethodHandles.class.getMethod("classData", Lookup.class, String.class, Class.class);
+            CLASS_DATA_AT_BOOTSTRAP = MethodHandles.class.getMethod("classDataAt", Lookup.class, String.class, Class.class, int.class);
+        }
+        catch (NoSuchMethodException e) {
+            throw new AssertionError(e);
+        }
+    }
+
     private BytecodeExpressions() {}
 
     //
@@ -131,6 +149,37 @@ public final class BytecodeExpressions
     public static BytecodeExpression constantString(String value)
     {
         return new ConstantBytecodeExpression(String.class, loadString(value));
+    }
+
+    /**
+     * Loads the class data of a hidden class defined with
+     * {@code Lookup.defineHiddenClassWithClassData} as a dynamic constant.
+     * The constant is resolved once and treated as a true constant by the JIT.
+     */
+    public static BytecodeExpression constantClassData(Class<?> type)
+    {
+        return constantClassData(type(type));
+    }
+
+    public static BytecodeExpression constantClassData(ParameterizedType type)
+    {
+        return constantDynamic(DEFAULT_NAME, type, CLASS_DATA_BOOTSTRAP);
+    }
+
+    /**
+     * Loads an element of the class data list of a hidden class defined with
+     * {@code Lookup.defineHiddenClassWithClassData} as a dynamic constant.
+     * The constant is resolved once and treated as a true constant by the JIT.
+     */
+    public static BytecodeExpression constantClassDataAt(int index, Class<?> type)
+    {
+        return constantClassDataAt(index, type(type));
+    }
+
+    public static BytecodeExpression constantClassDataAt(int index, ParameterizedType type)
+    {
+        checkArgument(index >= 0, "index is negative");
+        return constantDynamic(DEFAULT_NAME, type, CLASS_DATA_AT_BOOTSTRAP, index);
     }
 
     public static BytecodeExpression constantDynamic(
