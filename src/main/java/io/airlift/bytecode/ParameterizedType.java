@@ -313,79 +313,25 @@ public class ParameterizedType
         return n.getName().replace('.', '/');
     }
 
-    private static String toInternalIdentifier(Class<?> n)
+    private static String toInternalIdentifier(Class<?> clazz)
     {
-        if (n.isArray()) {
-            n = n.getComponentType();
-            if (n.isPrimitive()) {
-                if (n == Byte.TYPE) {
-                    return "[B";
-                }
-                else if (n == Boolean.TYPE) {
-                    return "[Z";
-                }
-                else if (n == Short.TYPE) {
-                    return "[S";
-                }
-                else if (n == Character.TYPE) {
-                    return "[C";
-                }
-                else if (n == Integer.TYPE) {
-                    return "[I";
-                }
-                else if (n == Float.TYPE) {
-                    return "[F";
-                }
-                else if (n == Double.TYPE) {
-                    return "[D";
-                }
-                else if (n == Long.TYPE) {
-                    return "[J";
-                }
-                else {
-                    throw new RuntimeException("Unrecognized type in compiler: " + n.getName());
-                }
-            }
-            else {
-                return "[" + toInternalIdentifier(n);
-            }
+        if (clazz.isArray()) {
+            return "[" + toInternalIdentifier(clazz.getComponentType());
         }
-        else {
-            if (n.isPrimitive()) {
-                if (n == Byte.TYPE) {
-                    return "B";
-                }
-                else if (n == Boolean.TYPE) {
-                    return "Z";
-                }
-                else if (n == Short.TYPE) {
-                    return "S";
-                }
-                else if (n == Character.TYPE) {
-                    return "C";
-                }
-                else if (n == Integer.TYPE) {
-                    return "I";
-                }
-                else if (n == Float.TYPE) {
-                    return "F";
-                }
-                else if (n == Double.TYPE) {
-                    return "D";
-                }
-                else if (n == Long.TYPE) {
-                    return "J";
-                }
-                else if (n == Void.TYPE) {
-                    return "V";
-                }
-                else {
-                    throw new RuntimeException("Unrecognized type in compiler: " + n.getName());
-                }
-            }
-            else {
-                return "L" + getPathName(n) + ";";
-            }
+        if (clazz.isPrimitive()) {
+            return switch (clazz.getName()) {
+                case "boolean" -> "Z";
+                case "byte" -> "B";
+                case "char" -> "C";
+                case "short" -> "S";
+                case "int" -> "I";
+                case "long" -> "J";
+                case "float" -> "F";
+                case "double" -> "D";
+                case "void" -> "V";
+                default -> throw new IllegalArgumentException("Unrecognized type in compiler: " + clazz.getName());
+            };
         }
+        return "L" + getPathName(clazz) + ";";
     }
 }
