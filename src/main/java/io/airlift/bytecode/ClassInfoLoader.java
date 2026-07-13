@@ -115,11 +115,18 @@ public class ClassInfoLoader
             classReader = new ClassReader(bytecode);
         }
         else {
-            // load class file from class loader
+            // resolve through the loader first: already loaded classes are a cheap
+            // lookup, while reading the class file parses the whole constant pool
+            Optional<Class<?>> clazz = loader.tryLoadClass(type);
+            if (clazz.isPresent()) {
+                return new ClassInfo(this, clazz.orElseThrow());
+            }
+
+            // fall back to reading the class file
             classReader = loader.createByteCodeClassReader(type)
                     .orElse(null);
             if (classReader == null) {
-                // load class directly and extract class info from loaded class
+                // load class directly to throw a descriptive exception
                 return new ClassInfo(this, loader.loadClass(type));
             }
         }
@@ -148,6 +155,8 @@ public class ClassInfoLoader
 
     private interface Loader
     {
+        Optional<Class<?>> tryLoadClass(ParameterizedType type);
+
         Optional<ClassReader> createByteCodeClassReader(ParameterizedType type);
 
         Class<?> loadClass(ParameterizedType type);
@@ -161,6 +170,17 @@ public class ClassInfoLoader
         public LookupLoader(Lookup lookup)
         {
             this.lookup = requireNonNull(lookup, "lookup is null");
+        }
+
+        @Override
+        public Optional<Class<?>> tryLoadClass(ParameterizedType type)
+        {
+            try {
+                return Optional.of(lookup.findClass(type.getJavaClassName()));
+            }
+            catch (ClassNotFoundException | IllegalAccessException ignored) {
+                return Optional.empty();
+            }
         }
 
         @Override
@@ -189,6 +209,19 @@ public class ClassInfoLoader
         public ClassLoaderLoader(ClassLoader classLoader)
         {
             this.classLoader = requireNonNull(classLoader, "classLoader is null");
+        }
+
+        @Override
+        public Optional<Class<?>> tryLoadClass(ParameterizedType type)
+        {
+            try {
+                // load without initializing: already loaded classes resolve
+                // without any class file access
+                return Optional.of(Class.forName(type.getJavaClassName(), false, classLoader));
+            }
+            catch (ClassNotFoundException | LinkageError ignored) {
+                return Optional.empty();
+            }
         }
 
         @Override
