@@ -21,6 +21,7 @@ import static io.airlift.bytecode.Access.PUBLIC;
 import static io.airlift.bytecode.Access.STATIC;
 import static io.airlift.bytecode.Access.a;
 import static io.airlift.bytecode.BytecodeUtils.estimateMaxCodeSize;
+import static io.airlift.bytecode.BytecodeUtils.isJitCompilable;
 import static io.airlift.bytecode.BytecodeUtils.toJavaIdentifierString;
 import static io.airlift.bytecode.Parameter.arg;
 import static io.airlift.bytecode.ParameterizedType.type;
@@ -75,5 +76,37 @@ class TestBytecodeUtils
         body.ret();
 
         assertThat(estimateMaxCodeSize(bigMethod.getBody(), bigMethod.getScope())).isEqualTo(2 * 40_000 + 1);
+    }
+
+    @Test
+    void testIsJitCompilable()
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "test/JitCompilable",
+                type(Object.class));
+
+        // 4000 push/pop pairs generate exactly 8000 bytes, the HugeMethodLimit
+        MethodDefinition atLimit = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "atLimit",
+                type(void.class),
+                ImmutableList.of());
+        BytecodeBlock atLimitBody = atLimit.getBody();
+        for (int i = 0; i < 4_000; i++) {
+            atLimitBody.push(0).pop();
+        }
+        assertThat(isJitCompilable(atLimitBody, atLimit.getScope())).isTrue();
+
+        MethodDefinition overLimit = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "overLimit",
+                type(void.class),
+                ImmutableList.of());
+        BytecodeBlock overLimitBody = overLimit.getBody();
+        for (int i = 0; i < 4_001; i++) {
+            overLimitBody.push(0).pop();
+        }
+        assertThat(isJitCompilable(overLimitBody, overLimit.getScope())).isFalse();
     }
 }
