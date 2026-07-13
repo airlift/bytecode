@@ -40,4 +40,23 @@ class TestParameterizedType
         assertThat(type(long[].class).getSlotSize()).isEqualTo(1);
         assertThat(typeFromJavaClassName("java.lang.String").getSlotSize()).isEqualTo(1);
     }
+
+    @Test
+    void testTypeDescriptor()
+    {
+        assertThat(type(boolean.class).getType()).isEqualTo("Z");
+        assertThat(type(byte.class).getType()).isEqualTo("B");
+        assertThat(type(char.class).getType()).isEqualTo("C");
+        assertThat(type(short.class).getType()).isEqualTo("S");
+        assertThat(type(int.class).getType()).isEqualTo("I");
+        assertThat(type(long.class).getType()).isEqualTo("J");
+        assertThat(type(float.class).getType()).isEqualTo("F");
+        assertThat(type(double.class).getType()).isEqualTo("D");
+        assertThat(type(void.class).getType()).isEqualTo("V");
+
+        assertThat(type(Object.class).getType()).isEqualTo("Ljava/lang/Object;");
+        assertThat(type(int[].class).getType()).isEqualTo("[I");
+        assertThat(type(long[][].class).getType()).isEqualTo("[[J");
+        assertThat(type(String[].class).getType()).isEqualTo("[Ljava/lang/String;");
+    }
 }
