@@ -52,7 +52,6 @@ import static io.airlift.bytecode.instruction.FieldInstruction.getStaticInstruct
 import static io.airlift.bytecode.instruction.InvokeInstruction.invokeStatic;
 import static java.util.Objects.requireNonNull;
 
-@SuppressWarnings("UnusedDeclaration")
 public abstract class Constant
         implements InstructionNode
 {

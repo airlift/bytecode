@@ -27,7 +27,6 @@ import java.util.List;
 import static io.airlift.bytecode.Access.toAccessModifier;
 import static io.airlift.bytecode.ParameterizedType.type;
 
-@SuppressWarnings("UnusedDeclaration")
 @Immutable
 public class FieldDefinition
 {

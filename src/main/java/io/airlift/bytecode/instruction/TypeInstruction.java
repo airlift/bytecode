@@ -32,7 +32,6 @@ import static io.airlift.bytecode.OpCode.NEW;
 import static io.airlift.bytecode.OpCode.NEWARRAY;
 import static io.airlift.bytecode.ParameterizedType.type;
 
-@SuppressWarnings("UnusedDeclaration")
 public class TypeInstruction
         implements InstructionNode
 {

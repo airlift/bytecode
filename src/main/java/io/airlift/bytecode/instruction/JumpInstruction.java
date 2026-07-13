@@ -39,7 +39,6 @@ import static io.airlift.bytecode.OpCode.IF_ICMPLE;
 import static io.airlift.bytecode.OpCode.IF_ICMPLT;
 import static io.airlift.bytecode.OpCode.IF_ICMPNE;
 
-@SuppressWarnings("UnusedDeclaration")
 public class JumpInstruction
         implements InstructionNode
 {
