@@ -13,9 +13,18 @@
  */
 package io.airlift.bytecode;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 
+import static io.airlift.bytecode.Access.FINAL;
+import static io.airlift.bytecode.Access.PUBLIC;
+import static io.airlift.bytecode.Access.STATIC;
+import static io.airlift.bytecode.Access.a;
+import static io.airlift.bytecode.BytecodeUtils.estimateMaxCodeSize;
 import static io.airlift.bytecode.BytecodeUtils.toJavaIdentifierString;
+import static io.airlift.bytecode.Parameter.arg;
+import static io.airlift.bytecode.ParameterizedType.type;
+import static io.airlift.bytecode.expression.BytecodeExpressions.add;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TestBytecodeUtils
@@ -27,5 +36,44 @@ class TestBytecodeUtils
         assertThat(toJavaIdentifierString("Hello$World")).isEqualTo("Hello$World");
         assertThat(toJavaIdentifierString("Hello#World")).isEqualTo("Hello_World");
         assertThat(toJavaIdentifierString("A^B^C")).isEqualTo("A_B_C");
+    }
+
+    @Test
+    void testEstimateMaxCodeSize()
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "test/EstimateSize",
+                type(Object.class));
+
+        Parameter argA = arg("a", int.class);
+        Parameter argB = arg("b", int.class);
+
+        MethodDefinition addMethod = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "add",
+                type(int.class),
+                ImmutableList.of(argA, argB));
+
+        addMethod.getBody()
+                .append(add(argA, argB))
+                .retInt();
+
+        // ILOAD, ILOAD, IADD, IRETURN
+        assertThat(estimateMaxCodeSize(addMethod.getBody(), addMethod.getScope())).isEqualTo(4);
+
+        MethodDefinition bigMethod = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "big",
+                type(void.class),
+                ImmutableList.of());
+
+        BytecodeBlock body = bigMethod.getBody();
+        for (int i = 0; i < 40_000; i++) {
+            body.push(0).pop();
+        }
+        body.ret();
+
+        assertThat(estimateMaxCodeSize(bigMethod.getBody(), bigMethod.getScope())).isEqualTo(2 * 40_000 + 1);
     }
 }
