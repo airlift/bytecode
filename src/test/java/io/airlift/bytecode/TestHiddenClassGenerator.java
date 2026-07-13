@@ -82,6 +82,46 @@ class TestHiddenClassGenerator
     }
 
     @Test
+    void testClassDataBinder()
+            throws Exception
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "io/airlift/bytecode/BinderExample",
+                type(Object.class));
+
+        ClassDataBinder binder = new ClassDataBinder();
+        String message = "hello";
+        MethodHandle addExact = lookup().findStatic(Math.class, "addExact", methodType(int.class, int.class, int.class));
+
+        classDefinition.declareMethod(a(PUBLIC, STATIC), "message", type(String.class))
+                .getBody()
+                .append(binder.bind(message, String.class).ret());
+
+        // binding the same object again reuses its class data slot
+        classDefinition.declareMethod(a(PUBLIC, STATIC), "sameMessage", type(String.class))
+                .getBody()
+                .append(binder.bind(message, String.class).ret());
+
+        Parameter argA = arg("a", int.class);
+        Parameter argB = arg("b", int.class);
+        classDefinition.declareMethod(a(PUBLIC, STATIC), "add", type(int.class), ImmutableList.of(argA, argB))
+                .getBody()
+                .append(binder.bind(addExact, MethodHandle.class)
+                        .invoke("invokeExact", int.class, argA, argB)
+                        .ret());
+
+        assertThat(binder.getBindings()).containsExactly(message, addExact);
+
+        Class<?> clazz = hiddenClassGenerator(lookup())
+                .defineHiddenClass(classDefinition, Object.class, Optional.of(binder.getBindings()));
+
+        assertThat(clazz.getMethod("message").invoke(null)).isSameAs(message);
+        assertThat(clazz.getMethod("sameMessage").invoke(null)).isSameAs(message);
+        assertThat(clazz.getMethod("add", int.class, int.class).invoke(null, 13, 42)).isEqualTo(55);
+    }
+
+    @Test
     void testGenerator()
             throws Exception
     {
