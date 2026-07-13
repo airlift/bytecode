@@ -16,10 +16,10 @@ package io.airlift.bytecode;
 import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.expression.BytecodeExpression;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -89,7 +89,7 @@ public class Scope
     {
         requireNonNull(tempVariable, "tempVariable is null");
         checkArgument(tempVariable == tempVariables.get(tempVariable.getName()), "invalid tempVariable release: %s", tempVariable);
-        releasedTempVariables.computeIfAbsent(tempVariable.getType(), _ -> new LinkedList<>()).push(tempVariable);
+        releasedTempVariables.computeIfAbsent(tempVariable.getType(), _ -> new ArrayDeque<>()).push(tempVariable);
     }
 
     public Variable getTempVariable(String name)
