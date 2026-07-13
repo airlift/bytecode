@@ -35,7 +35,6 @@ import static java.util.Objects.requireNonNullElseGet;
 import static java.util.stream.Collectors.joining;
 import static org.objectweb.asm.Opcodes.RETURN;
 
-@SuppressWarnings("UnusedDeclaration")
 public class MethodDefinition
 {
     private final Scope scope;

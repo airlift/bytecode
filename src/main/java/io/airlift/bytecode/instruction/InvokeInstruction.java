@@ -43,7 +43,6 @@ import static io.airlift.bytecode.OpCode.INVOKEVIRTUAL;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static java.util.Objects.requireNonNull;
 
-@SuppressWarnings("UnusedDeclaration")
 public class InvokeInstruction
         implements InstructionNode
 {
