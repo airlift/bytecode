@@ -14,10 +14,13 @@
 package io.airlift.bytecode;
 
 import com.google.common.base.CharMatcher;
+import com.sun.management.HotSpotDiagnosticMXBean;
 import org.objectweb.asm.commons.CodeSizeEvaluator;
 
 import java.io.StringWriter;
 import java.lang.invoke.MethodHandles.Lookup;
+import java.lang.management.ManagementFactory;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.airlift.bytecode.ParameterizedType.typeFromJavaClassName;
@@ -25,6 +28,17 @@ import static io.airlift.bytecode.ParameterizedType.typeFromJavaClassName;
 public final class BytecodeUtils
 {
     private static final AtomicLong CLASS_ID = new AtomicLong();
+
+    // DontCompileHugeMethods is a product flag and can be read from the runtime.
+    private static final boolean DONT_COMPILE_HUGE_METHODS = getVmOption("DontCompileHugeMethods")
+            .map(Boolean::parseBoolean)
+            .orElse(true);
+
+    // HugeMethodLimit is a develop flag, only readable on debug JVM builds; on
+    // release builds it is compiled in as the constant 8000.
+    private static final int HUGE_METHOD_LIMIT = getVmOption("HugeMethodLimit")
+            .map(Integer::parseInt)
+            .orElse(8000);
 
     private BytecodeUtils() {}
 
@@ -87,5 +101,43 @@ public final class BytecodeUtils
             size++;
         }
         return size;
+    }
+
+    /**
+     * Checks whether a method generated from the given node is eligible for JIT
+     * compilation on this JVM. On HotSpot with default flags, methods whose code
+     * attribute exceeds {@code -XX:HugeMethodLimit} (8000 bytes) are never JIT
+     * compiled and always run interpreted; the limits are read from the runtime
+     * where available. Since the size estimate is an upper bound, a {@code true}
+     * result is a guarantee; a {@code false} result may be a false negative for
+     * code close to the limit.
+     */
+    public static boolean isJitCompilable(BytecodeNode node, Scope scope)
+    {
+        return !DONT_COMPILE_HUGE_METHODS || estimateMaxCodeSize(node, scope) <= HUGE_METHOD_LIMIT;
+    }
+
+    /**
+     * Same as {@link #isJitCompilable(BytecodeNode, Scope)} for a whole method,
+     * accounting for the implicit {@code RETURN} appended to class initializers.
+     */
+    public static boolean isJitCompilable(MethodDefinition method)
+    {
+        return !DONT_COMPILE_HUGE_METHODS || estimateMaxCodeSize(method) <= HUGE_METHOD_LIMIT;
+    }
+
+    private static Optional<String> getVmOption(String name)
+    {
+        try {
+            HotSpotDiagnosticMXBean diagnostics = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
+            if (diagnostics == null) {
+                return Optional.empty();
+            }
+            return Optional.of(diagnostics.getVMOption(name).getValue());
+        }
+        catch (RuntimeException | LinkageError e) {
+            // not a HotSpot JVM, or the option does not exist in this build
+            return Optional.empty();
+        }
     }
 }
