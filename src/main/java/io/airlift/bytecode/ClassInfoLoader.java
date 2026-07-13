@@ -46,7 +46,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.util.CheckClassAdapter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -65,7 +64,7 @@ public class ClassInfoLoader
         ClassNode classNode = new ClassNode();
         classDefinition.visit(classNode);
 
-        return new ClassInfoLoader(ImmutableMap.of(classDefinition.getType(), classNode), ImmutableMap.of(), new LookupLoader(lookup), true);
+        return new ClassInfoLoader(ImmutableMap.of(classDefinition.getType(), classNode), ImmutableMap.of(), new LookupLoader(lookup));
     }
 
     public static ClassInfoLoader createClassInfoLoader(Iterable<ClassDefinition> classDefinitions, ClassLoader classLoader)
@@ -76,21 +75,19 @@ public class ClassInfoLoader
             classDefinition.visit(classNode);
             classNodes.put(classDefinition.getType(), classNode);
         }
-        return new ClassInfoLoader(classNodes.build(), ImmutableMap.of(), new ClassLoaderLoader(classLoader), true);
+        return new ClassInfoLoader(classNodes.build(), ImmutableMap.of(), new ClassLoaderLoader(classLoader));
     }
 
     private final Map<ParameterizedType, ClassNode> classNodes;
     private final Map<ParameterizedType, byte[]> bytecodes;
     private final Loader loader;
     private final Map<ParameterizedType, ClassInfo> classInfoCache = new HashMap<>();
-    private final boolean loadMethodNodes;
 
-    private ClassInfoLoader(Map<ParameterizedType, ClassNode> classNodes, Map<ParameterizedType, byte[]> bytecodes, Loader loader, boolean loadMethodNodes)
+    private ClassInfoLoader(Map<ParameterizedType, ClassNode> classNodes, Map<ParameterizedType, byte[]> bytecodes, Loader loader)
     {
         this.classNodes = ImmutableMap.copyOf(classNodes);
         this.bytecodes = ImmutableMap.copyOf(bytecodes);
         this.loader = loader;
-        this.loadMethodNodes = loadMethodNodes;
     }
 
     public ClassInfo loadClassInfo(ParameterizedType type)
@@ -127,40 +124,26 @@ public class ClassInfoLoader
             }
         }
 
-        if (loadMethodNodes) {
-            // slower version that loads all operations
-            classNode = new ClassNode();
-            classReader.accept(new CheckClassAdapter(classNode, false), ClassReader.SKIP_DEBUG);
+        // only the header is needed: computing common superclasses for frames
+        // uses just the access flags, superclass, and interfaces
+        int header = classReader.header;
+        int access = classReader.readUnsignedShort(header);
 
-            return new ClassInfo(this, classNode);
+        char[] buf = new char[classReader.getMaxStringLength()];
+
+        // read super class name
+        String superClassName = classReader.readClass(header + 4, buf);
+        ParameterizedType superClass = superClassName == null ? null : typeFromPathName(superClassName);
+
+        // read each interface name
+        int interfaceCount = classReader.readUnsignedShort(header + 6);
+        ImmutableList.Builder<ParameterizedType> interfaces = ImmutableList.builder();
+        header += 8;
+        for (int i = 0; i < interfaceCount; ++i) {
+            interfaces.add(typeFromPathName(classReader.readClass(header, buf)));
+            header += 2;
         }
-        else {
-            // optimized version
-            int header = classReader.header;
-            int access = classReader.readUnsignedShort(header);
-
-            char[] buf = new char[2048];
-
-            // read super class name
-            int superClassIndex = classReader.getItem(classReader.readUnsignedShort(header + 4));
-            ParameterizedType superClass;
-            if (superClassIndex == 0) {
-                superClass = null;
-            }
-            else {
-                superClass = typeFromPathName(classReader.readUTF8(superClassIndex, buf));
-            }
-
-            // read each interface name
-            int interfaceCount = classReader.readUnsignedShort(header + 6);
-            ImmutableList.Builder<ParameterizedType> interfaces = ImmutableList.builder();
-            header += 8;
-            for (int i = 0; i < interfaceCount; ++i) {
-                interfaces.add(typeFromPathName(classReader.readClass(header, buf)));
-                header += 2;
-            }
-            return new ClassInfo(this, type, access, superClass, interfaces.build(), null);
-        }
+        return new ClassInfo(this, type, access, superClass, interfaces.build(), null);
     }
 
     private interface Loader
