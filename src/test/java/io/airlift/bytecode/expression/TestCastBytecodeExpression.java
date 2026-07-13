@@ -37,7 +37,8 @@ public class TestCastBytecodeExpression
     void testDownCastObject()
             throws Exception
     {
-        assertBytecodeExpression(getStatic(getClass(), "OBJECT_FIELD").cast(String.class).invoke("length", int.class),
+        assertBytecodeExpression(
+                getStatic(getClass(), "OBJECT_FIELD").cast(String.class).invoke("length", int.class),
                 ((String) OBJECT_FIELD).length(),
                 "((String) " + getClass().getSimpleName() + ".OBJECT_FIELD).length()");
     }

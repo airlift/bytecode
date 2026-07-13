@@ -79,7 +79,7 @@ public final class BytecodeExpressionAssertions
     public static void assertBytecodeNode(BytecodeNode node, ParameterizedType returnType, Object expected, Optional<ClassLoader> parentClassLoader)
             throws Exception
     {
-        assertThat(execute(context -> node, returnType, parentClassLoader)).isEqualTo(expected);
+        assertThat(execute(_ -> node, returnType, parentClassLoader)).isEqualTo(expected);
     }
 
     public static void assertBytecodeNode(Function<Scope, BytecodeNode> nodeGenerator, ParameterizedType returnType, Object expected)

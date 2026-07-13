@@ -218,7 +218,8 @@ public class InvokeInstruction
 
     private static InstructionNode invoke(OpCode invocationType, Method method)
     {
-        return new InvokeInstruction(invocationType,
+        return new InvokeInstruction(
+                invocationType,
                 type(method.getDeclaringClass()),
                 method.getName(),
                 type(method.getReturnType()),
@@ -227,7 +228,8 @@ public class InvokeInstruction
 
     private static InstructionNode invoke(OpCode invocationType, MethodDefinition method)
     {
-        return new InvokeInstruction(invocationType,
+        return new InvokeInstruction(
+                invocationType,
                 method.getDeclaringClass().getType(),
                 method.getName(),
                 method.getReturnType(),
@@ -236,7 +238,8 @@ public class InvokeInstruction
 
     private static InstructionNode invoke(OpCode invocationType, ParameterizedType target, String name, ParameterizedType returnType, Iterable<ParameterizedType> parameterTypes)
     {
-        return new InvokeInstruction(invocationType,
+        return new InvokeInstruction(
+                invocationType,
                 target,
                 name,
                 returnType,
@@ -245,7 +248,8 @@ public class InvokeInstruction
 
     private static InstructionNode invoke(OpCode invocationType, Class<?> target, String name, Class<?> returnType, Iterable<Class<?>> parameterTypes)
     {
-        return new InvokeInstruction(invocationType,
+        return new InvokeInstruction(
+                invocationType,
                 type(target),
                 name,
                 type(returnType),
@@ -256,50 +260,58 @@ public class InvokeInstruction
     // Invoke Dynamic
     //
 
-    public static InstructionNode invokeDynamic(String name,
+    public static InstructionNode invokeDynamic(
+            String name,
             ParameterizedType returnType,
             Iterable<ParameterizedType> parameterTypes,
             Method bootstrapMethod,
             Iterable<Object> bootstrapArguments)
     {
-        return new InvokeDynamicInstruction(name,
+        return new InvokeDynamicInstruction(
+                name,
                 returnType,
                 parameterTypes,
                 bootstrapMethod,
                 ImmutableList.copyOf(bootstrapArguments));
     }
 
-    public static InstructionNode invokeDynamic(String name,
+    public static InstructionNode invokeDynamic(
+            String name,
             ParameterizedType returnType,
             Iterable<ParameterizedType> parameterTypes,
             Method bootstrapMethod,
             Object... bootstrapArguments)
     {
-        return new InvokeDynamicInstruction(name,
+        return new InvokeDynamicInstruction(
+                name,
                 returnType,
                 parameterTypes,
                 bootstrapMethod,
                 ImmutableList.copyOf(bootstrapArguments));
     }
 
-    public static InstructionNode invokeDynamic(String name,
+    public static InstructionNode invokeDynamic(
+            String name,
             MethodType methodType,
             Method bootstrapMethod,
             Iterable<Object> bootstrapArguments)
     {
-        return new InvokeDynamicInstruction(name,
+        return new InvokeDynamicInstruction(
+                name,
                 type(methodType.returnType()),
                 methodType.parameterList().stream().map(ParameterizedType::type).collect(toImmutableList()),
                 bootstrapMethod,
                 ImmutableList.copyOf(bootstrapArguments));
     }
 
-    public static InstructionNode invokeDynamic(String name,
+    public static InstructionNode invokeDynamic(
+            String name,
             MethodType methodType,
             Method bootstrapMethod,
             Object... bootstrapArguments)
     {
-        return new InvokeDynamicInstruction(name,
+        return new InvokeDynamicInstruction(
+                name,
                 type(methodType.returnType()),
                 methodType.parameterList().stream().map(ParameterizedType::type).collect(toImmutableList()),
                 bootstrapMethod,
@@ -312,7 +324,8 @@ public class InvokeInstruction
     private final ParameterizedType returnType;
     private final List<ParameterizedType> parameterTypes;
 
-    public InvokeInstruction(OpCode opCode,
+    public InvokeInstruction(
+            OpCode opCode,
             ParameterizedType target,
             String name,
             ParameterizedType returnType,
@@ -380,7 +393,8 @@ public class InvokeInstruction
         private final Method bootstrapMethod;
         private final List<Object> bootstrapArguments;
 
-        public InvokeDynamicInstruction(String name,
+        public InvokeDynamicInstruction(
+                String name,
                 ParameterizedType returnType,
                 Iterable<ParameterizedType> parameterTypes,
                 Method bootstrapMethod,
@@ -394,7 +408,8 @@ public class InvokeInstruction
         @Override
         public void accept(MethodVisitor visitor, MethodGenerationContext generationContext)
         {
-            Handle bootstrapMethodHandle = new Handle(Opcodes.H_INVOKESTATIC,
+            Handle bootstrapMethodHandle = new Handle(
+                    Opcodes.H_INVOKESTATIC,
                     type(bootstrapMethod.getDeclaringClass()).getClassName(),
                     bootstrapMethod.getName(),
                     methodDescription(
@@ -402,7 +417,8 @@ public class InvokeInstruction
                             bootstrapMethod.getParameterTypes()),
                     false);
 
-            visitor.visitInvokeDynamicInsn(getName(),
+            visitor.visitInvokeDynamicInsn(
+                    getName(),
                     getMethodDescription(),
                     bootstrapMethodHandle,
                     bootstrapArguments.toArray(new Object[0]));

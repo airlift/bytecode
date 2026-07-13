@@ -84,7 +84,7 @@ public class MethodDefinition
         this.parameters = ImmutableList.copyOf(parameters);
         this.parameterTypes = Lists.transform(this.parameters, Parameter::getType);
         this.parameterAnnotations = Streams.stream(parameters)
-                .map(input -> new ArrayList<AnnotationDefinition>())
+                .map(_ -> new ArrayList<AnnotationDefinition>())
                 .collect(toImmutableList());
         Optional<ParameterizedType> thisType = Optional.empty();
         if (!declaringClass.isInterface() && !access.contains(STATIC)) {
@@ -146,7 +146,7 @@ public class MethodDefinition
 
     public MethodDefinition comment(String format, Object... args)
     {
-        this.comment = String.format(format, args);
+        this.comment = format.formatted(args);
         return this;
     }
 
@@ -218,7 +218,8 @@ public class MethodDefinition
             exceptions[i] = this.exceptions.get(i).getClassName();
         }
 
-        MethodVisitor methodVisitor = visitor.visitMethod(toAccessModifier(access),
+        MethodVisitor methodVisitor = visitor.visitMethod(
+                toAccessModifier(access),
                 name,
                 getMethodDescriptor(),
                 genericMethodSignature(returnType, parameterTypes),

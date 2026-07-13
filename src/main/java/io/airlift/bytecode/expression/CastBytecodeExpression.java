@@ -25,7 +25,6 @@ import java.util.List;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.primitives.Primitives.wrap;
 import static io.airlift.bytecode.ParameterizedType.type;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 class CastBytecodeExpression
@@ -60,46 +59,42 @@ class CastBytecodeExpression
     {
         BytecodeBlock block = new BytecodeBlock();
 
-        switch (getTypeKind(sourceType)) {
-            case PRIMITIVE:
-                switch (getTypeKind(targetType)) {
-                    case PRIMITIVE:
-                        castPrimitiveToPrimitive(block, sourceType.getPrimitiveType(), targetType.getPrimitiveType());
-                        return block;
-                    case BOXED_PRIMITVE:
-                        checkArgument(sourceType.getPrimitiveType() == unwrapPrimitiveType(targetType), "Type %s can not be cast to %s", sourceType, targetType);
-                        return block.invokeStatic(targetType, "valueOf", targetType, sourceType);
-                    case OTHER:
-                        checkArgument(OBJECT_TYPE.equals(targetType), "Type %s can not be cast to %s", sourceType, targetType);
-                        Class<?> sourceClass = sourceType.getPrimitiveType();
-                        return block
-                                .invokeStatic(wrap(sourceClass), "valueOf", wrap(sourceClass), sourceClass)
-                                .checkCast(targetType);
+        return switch (getTypeKind(sourceType)) {
+            case PRIMITIVE -> switch (getTypeKind(targetType)) {
+                case PRIMITIVE -> castPrimitiveToPrimitive(block, sourceType.getPrimitiveType(), targetType.getPrimitiveType());
+                case BOXED_PRIMITVE -> {
+                    checkArgument(sourceType.getPrimitiveType() == unwrapPrimitiveType(targetType), "Type %s can not be cast to %s", sourceType, targetType);
+                    yield block.invokeStatic(targetType, "valueOf", targetType, sourceType);
                 }
-            case BOXED_PRIMITVE:
-                switch (getTypeKind(targetType)) {
-                    case PRIMITIVE:
-                        checkArgument(unwrapPrimitiveType(sourceType) == targetType.getPrimitiveType(), "Type %s can not be cast to %s", sourceType, targetType);
-                        return block.invokeVirtual(sourceType, targetType.getPrimitiveType().getSimpleName() + "Value", targetType);
-                    case BOXED_PRIMITVE:
-                        checkArgument(sourceType.equals(targetType), "Type %s can not be cast to %s", sourceType, targetType);
-                        return block;
-                    case OTHER:
-                        return block.checkCast(targetType);
+                case OTHER -> {
+                    checkArgument(OBJECT_TYPE.equals(targetType), "Type %s can not be cast to %s", sourceType, targetType);
+                    Class<?> sourceClass = sourceType.getPrimitiveType();
+                    yield block
+                            .invokeStatic(wrap(sourceClass), "valueOf", wrap(sourceClass), sourceClass)
+                            .checkCast(targetType);
                 }
-            case OTHER:
-                switch (getTypeKind(targetType)) {
-                    case PRIMITIVE:
-                        checkArgument(OBJECT_TYPE.equals(sourceType), "Type %s can not be cast to %s", sourceType, targetType);
-                        return block
-                                .checkCast(wrap(targetType.getPrimitiveType()))
-                                .invokeVirtual(wrap(targetType.getPrimitiveType()), targetType.getPrimitiveType().getSimpleName() + "Value", targetType.getPrimitiveType());
-                    case BOXED_PRIMITVE:
-                    case OTHER:
-                        return block.checkCast(targetType);
+            };
+            case BOXED_PRIMITVE -> switch (getTypeKind(targetType)) {
+                case PRIMITIVE -> {
+                    checkArgument(unwrapPrimitiveType(sourceType) == targetType.getPrimitiveType(), "Type %s can not be cast to %s", sourceType, targetType);
+                    yield block.invokeVirtual(sourceType, targetType.getPrimitiveType().getSimpleName() + "Value", targetType);
                 }
-        }
-        throw new UnsupportedOperationException("unexpected enum value");
+                case BOXED_PRIMITVE -> {
+                    checkArgument(sourceType.equals(targetType), "Type %s can not be cast to %s", sourceType, targetType);
+                    yield block;
+                }
+                case OTHER -> block.checkCast(targetType);
+            };
+            case OTHER -> switch (getTypeKind(targetType)) {
+                case PRIMITIVE -> {
+                    checkArgument(OBJECT_TYPE.equals(sourceType), "Type %s can not be cast to %s", sourceType, targetType);
+                    yield block
+                            .checkCast(wrap(targetType.getPrimitiveType()))
+                            .invokeVirtual(wrap(targetType.getPrimitiveType()), targetType.getPrimitiveType().getSimpleName() + "Value", targetType.getPrimitiveType());
+                }
+                case BOXED_PRIMITVE, OTHER -> block.checkCast(targetType);
+            };
+        };
     }
 
     private static BytecodeBlock castPrimitiveToPrimitive(BytecodeBlock block, Class<?> sourceType, Class<?> targetType)
@@ -273,7 +268,7 @@ class CastBytecodeExpression
                 return block;
             }
         }
-        throw new IllegalArgumentException(format("Type %s can not be cast to %s", sourceType.getName(), targetType.getName()));
+        throw new IllegalArgumentException("Type %s can not be cast to %s".formatted(sourceType.getName(), targetType.getName()));
     }
 
     private static TypeKind getTypeKind(ParameterizedType type)
@@ -289,26 +284,17 @@ class CastBytecodeExpression
 
     private static Class<?> unwrapPrimitiveType(ParameterizedType boxedPrimitiveType)
     {
-        switch (boxedPrimitiveType.getJavaClassName()) {
-            case "java.lang.Boolean":
-                return boolean.class;
-            case "java.lang.Byte":
-                return byte.class;
-            case "java.lang.Character":
-                return char.class;
-            case "java.lang.Short":
-                return short.class;
-            case "java.lang.Integer":
-                return int.class;
-            case "java.lang.Long":
-                return long.class;
-            case "java.lang.Float":
-                return float.class;
-            case "java.lang.Double":
-                return double.class;
-            default:
-                return null;
-        }
+        return switch (boxedPrimitiveType.getJavaClassName()) {
+            case "java.lang.Boolean" -> boolean.class;
+            case "java.lang.Byte" -> byte.class;
+            case "java.lang.Character" -> char.class;
+            case "java.lang.Short" -> short.class;
+            case "java.lang.Integer" -> int.class;
+            case "java.lang.Long" -> long.class;
+            case "java.lang.Float" -> float.class;
+            case "java.lang.Double" -> double.class;
+            default -> null;
+        };
     }
 
     @Override

@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode.expression;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.BytecodeBlock;
 import io.airlift.bytecode.BytecodeNode;
@@ -23,6 +22,7 @@ import io.airlift.bytecode.ParameterizedType;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
 class NewInstanceBytecodeExpression
         extends BytecodeExpression
@@ -56,7 +56,7 @@ class NewInstanceBytecodeExpression
     @Override
     protected String formatOneLine()
     {
-        return "new " + getType().getSimpleName() + "(" + Joiner.on(", ").join(parameters) + ")";
+        return "new " + getType().getSimpleName() + "(" + parameters.stream().map(Object::toString).collect(joining(", ")) + ")";
     }
 
     @Override

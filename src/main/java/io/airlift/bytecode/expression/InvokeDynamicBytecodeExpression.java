@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode.expression;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.BytecodeBlock;
 import io.airlift.bytecode.BytecodeNode;
@@ -79,7 +78,7 @@ class InvokeDynamicBytecodeExpression
         }
         builder.append("]=>");
 
-        builder.append(methodName).append("(").append(Joiner.on(", ").join(parameters)).append(")");
+        builder.append(methodName).append("(").append(parameters.stream().map(Object::toString).collect(Collectors.joining(", "))).append(")");
 
         return builder.toString();
     }

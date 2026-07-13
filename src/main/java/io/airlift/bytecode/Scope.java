@@ -90,7 +90,7 @@ public class Scope
     {
         requireNonNull(tempVariable, "tempVariable is null");
         checkArgument(tempVariable == tempVariables.get(tempVariable.getName()), "invalid tempVariable release: %s", tempVariable);
-        releasedTempVariables.computeIfAbsent(tempVariable.getType(), ignored -> new LinkedList<>()).push(tempVariable);
+        releasedTempVariables.computeIfAbsent(tempVariable.getType(), _ -> new LinkedList<>()).push(tempVariable);
     }
 
     public Variable getTempVariable(String name)

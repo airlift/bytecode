@@ -16,6 +16,4 @@ package io.airlift.bytecode.instruction;
 import io.airlift.bytecode.BytecodeNode;
 
 public interface InstructionNode
-        extends BytecodeNode
-{
-}
+        extends BytecodeNode {}
