@@ -17,8 +17,10 @@ import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 
 import java.io.StringWriter;
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 
 import static com.google.common.io.MoreFiles.deleteRecursively;
@@ -31,12 +33,54 @@ import static io.airlift.bytecode.HiddenClassGenerator.hiddenClassGenerator;
 import static io.airlift.bytecode.Parameter.arg;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.BytecodeExpressions.add;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantClassData;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantClassDataAt;
 import static java.lang.invoke.MethodHandles.lookup;
+import static java.lang.invoke.MethodType.methodType;
 import static java.nio.file.Files.createTempDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TestHiddenClassGenerator
 {
+    @Test
+    void testClassDataConstants()
+            throws Exception
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "io/airlift/bytecode/ClassDataExample",
+                type(Object.class));
+
+        // load the entire class data list
+        classDefinition.declareMethod(a(PUBLIC, STATIC), "data", type(List.class))
+                .getBody()
+                .append(constantClassData(List.class).ret());
+
+        // load a single element of the class data
+        classDefinition.declareMethod(a(PUBLIC, STATIC), "message", type(String.class))
+                .getBody()
+                .append(constantClassDataAt(0, String.class).ret());
+
+        // invoke a MethodHandle bound through the class data
+        Parameter argA = arg("a", int.class);
+        Parameter argB = arg("b", int.class);
+        classDefinition.declareMethod(a(PUBLIC, STATIC), "add", type(int.class), ImmutableList.of(argA, argB))
+                .getBody()
+                .append(constantClassDataAt(1, MethodHandle.class)
+                        .invoke("invokeExact", int.class, argA, argB)
+                        .ret());
+
+        MethodHandle addExact = lookup().findStatic(Math.class, "addExact", methodType(int.class, int.class, int.class));
+        List<Object> classData = ImmutableList.of("hello", addExact);
+
+        Class<?> clazz = hiddenClassGenerator(lookup())
+                .defineHiddenClass(classDefinition, Object.class, Optional.of(classData));
+
+        assertThat(clazz.getMethod("data").invoke(null)).isSameAs(classData);
+        assertThat(clazz.getMethod("message").invoke(null)).isEqualTo("hello");
+        assertThat(clazz.getMethod("add", int.class, int.class).invoke(null, 13, 42)).isEqualTo(55);
+    }
+
     @Test
     void testGenerator()
             throws Exception
