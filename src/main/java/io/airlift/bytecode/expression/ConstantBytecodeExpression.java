@@ -53,20 +53,14 @@ class ConstantBytecodeExpression
 
     public static String renderConstant(Object value)
     {
-        if (value instanceof Long) {
-            return value + "L";
-        }
-        if (value instanceof Float) {
-            return value + "f";
-        }
-        if (value instanceof ParameterizedType) {
-            return ((ParameterizedType) value).getSimpleName() + ".class";
-        }
-        // todo escape string
-        if (value instanceof String) {
-            return "\"" + value + "\"";
-        }
-        return String.valueOf(value);
+        return switch (value) {
+            case Long longValue -> longValue + "L";
+            case Float floatValue -> floatValue + "f";
+            case ParameterizedType parameterizedType -> parameterizedType.getSimpleName() + ".class";
+            // todo escape string
+            case String string -> "\"" + string + "\"";
+            case null, default -> String.valueOf(value);
+        };
     }
 
     @Override
