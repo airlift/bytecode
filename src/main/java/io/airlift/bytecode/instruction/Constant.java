@@ -114,25 +114,15 @@ public abstract class Constant
     public static Constant loadNumber(Number value)
     {
         requireNonNull(value, "value is null");
-        if (value instanceof Byte) {
-            return loadInt((value).intValue());
-        }
-        if (value instanceof Short) {
-            return loadInt((value).intValue());
-        }
-        if (value instanceof Integer) {
-            return loadInt((Integer) value);
-        }
-        if (value instanceof Long) {
-            return loadLong((Long) value);
-        }
-        if (value instanceof Float) {
-            return loadFloat((Float) value);
-        }
-        if (value instanceof Double) {
-            return loadDouble((Double) value);
-        }
-        throw new IllegalStateException("Unsupported number type " + value.getClass().getSimpleName());
+        return switch (value) {
+            case Byte byteValue -> loadInt(byteValue.intValue());
+            case Short shortValue -> loadInt(shortValue.intValue());
+            case Integer integerValue -> loadInt(integerValue);
+            case Long longValue -> loadLong(longValue);
+            case Float floatValue -> loadFloat(floatValue);
+            case Double doubleValue -> loadDouble(doubleValue);
+            default -> throw new IllegalStateException("Unsupported number type " + value.getClass().getSimpleName());
+        };
     }
 
     public static Constant loadString(String value)

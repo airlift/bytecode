@@ -149,12 +149,14 @@ public class AnnotationDefinition
 
     private static void isValidType(Object value)
     {
-        if (value instanceof List) {
+        if (value instanceof List<?> list) {
             // todo verify list contains single type
-            for (Object v : (List<Object>) value) {
-                checkArgument(ALLOWED_TYPES.contains(v.getClass()), "List contains invalid type %s", v.getClass());
+            for (Object v : list) {
                 if (v instanceof List) {
-                    isValidType(value);
+                    isValidType(v);
+                }
+                else {
+                    checkArgument(ALLOWED_TYPES.contains(v.getClass()), "List contains invalid type %s", v.getClass());
                 }
             }
         }
@@ -202,32 +204,22 @@ public class AnnotationDefinition
 
     private static void visit(AnnotationVisitor visitor, String name, Object value)
     {
-        if (value instanceof AnnotationDefinition) {
-            AnnotationDefinition annotation = (AnnotationDefinition) value;
-            AnnotationVisitor annotationVisitor = visitor.visitAnnotation(name, annotation.type.getType());
-            annotation.visit(annotationVisitor);
-        }
-        else if (value instanceof Enum) {
-            Enum<?> enumConstant = (Enum<?>) value;
-            visitor.visitEnum(name, type(enumConstant.getDeclaringClass()).getClassName(), enumConstant.name());
-        }
-        else if (value instanceof ParameterizedType) {
-            ParameterizedType parameterizedType = (ParameterizedType) value;
-            visitor.visit(name, Type.getType(parameterizedType.getType()));
-        }
-        else if (value instanceof Class) {
-            Class<?> clazz = (Class<?>) value;
-            visitor.visit(name, Type.getType(clazz));
-        }
-        else if (value instanceof List) {
-            AnnotationVisitor arrayVisitor = visitor.visitArray(name);
-            for (Object element : (List<?>) value) {
-                visit(arrayVisitor, null, element);
+        switch (value) {
+            case AnnotationDefinition annotation -> {
+                AnnotationVisitor annotationVisitor = visitor.visitAnnotation(name, annotation.type.getType());
+                annotation.visit(annotationVisitor);
             }
-            arrayVisitor.visitEnd();
-        }
-        else {
-            visitor.visit(name, value);
+            case Enum<?> enumConstant -> visitor.visitEnum(name, type(enumConstant.getDeclaringClass()).getClassName(), enumConstant.name());
+            case ParameterizedType parameterizedType -> visitor.visit(name, Type.getType(parameterizedType.getType()));
+            case Class<?> clazz -> visitor.visit(name, Type.getType(clazz));
+            case List<?> list -> {
+                AnnotationVisitor arrayVisitor = visitor.visitArray(name);
+                for (Object element : list) {
+                    visit(arrayVisitor, null, element);
+                }
+                arrayVisitor.visitEnd();
+            }
+            case null, default -> visitor.visit(name, value);
         }
     }
 }
