@@ -13,7 +13,6 @@
  */
 package io.airlift.bytecode;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
@@ -265,11 +264,9 @@ public class MethodDefinition
 
     public String toSourceString()
     {
-        StringBuilder sb = new StringBuilder();
-        Joiner.on(' ').appendTo(sb, access).append(' ');
-        sb.append(returnType.getJavaClassName()).append(' ');
-        sb.append(parameters.stream().map(Parameter::getSourceString).collect(joining(", ", "(", ")")));
-        return sb.toString();
+        return access.stream().map(Access::toString).collect(joining(" ")) +
+                ' ' + returnType.getJavaClassName() + ' ' +
+                parameters.stream().map(Parameter::getSourceString).collect(joining(", ", "(", ")"));
     }
 
     @Override
@@ -318,11 +315,8 @@ public class MethodDefinition
             ParameterizedType returnType,
             List<ParameterizedType> parameterTypes)
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append("(");
-        Joiner.on("").appendTo(sb, parameterTypes);
-        sb.append(")");
-        sb.append(returnType);
-        return sb.toString();
+        return parameterTypes.stream()
+                .map(ParameterizedType::toString)
+                .collect(joining("", "(", ")")) + returnType;
     }
 }
