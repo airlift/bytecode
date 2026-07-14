@@ -68,9 +68,22 @@ public class HiddenClassGenerator
 
     public <T> Class<? extends T> defineHiddenClass(ClassDefinition classDefinition, Class<T> superType, Optional<Object> classData)
     {
-        ClassInfoLoader classInfoLoader = createClassInfoLoader(classDefinition, lookup);
-        byte[] bytecode = byteCodeGenerator.generateByteCode(classInfoLoader, classDefinition);
+        return defineHiddenClass(generateBytes(classDefinition), superType, classData);
+    }
 
+    /**
+     * Generates the class file bytes of a hidden class without defining it. The bytes can
+     * be passed to {@link #defineHiddenClass(byte[], Class, Optional)} any number of times,
+     * each definition with its own class data.
+     */
+    public byte[] generateBytes(ClassDefinition classDefinition)
+    {
+        ClassInfoLoader classInfoLoader = createClassInfoLoader(classDefinition, lookup);
+        return byteCodeGenerator.generateByteCode(classInfoLoader, classDefinition);
+    }
+
+    public <T> Class<? extends T> defineHiddenClass(byte[] bytecode, Class<T> superType, Optional<Object> classData)
+    {
         Lookup definedClassLookup;
         try {
             if (classData.isEmpty()) {
