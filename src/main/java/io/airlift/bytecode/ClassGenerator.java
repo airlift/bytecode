@@ -60,6 +60,15 @@ public class ClassGenerator
         return new ClassGenerator(classLoader, byteCodeGenerator.fakeLineNumbers(fakeLineNumbers));
     }
 
+    /**
+     * Omit debug info (SourceFile, LineNumberTable, LocalVariableTable) from generated classes.
+     * Takes precedence over {@link #fakeLineNumbers}.
+     */
+    public ClassGenerator omitDebugInfo(boolean omitDebugInfo)
+    {
+        return new ClassGenerator(classLoader, byteCodeGenerator.omitDebugInfo(omitDebugInfo));
+    }
+
     public ClassGenerator runAsmVerifier(boolean runAsmVerifier)
     {
         return new ClassGenerator(classLoader, byteCodeGenerator.runAsmVerifier(runAsmVerifier ? classLoader : null));

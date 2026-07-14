@@ -41,6 +41,15 @@ public class HiddenClassGenerator
         return new HiddenClassGenerator(lookup, byteCodeGenerator.fakeLineNumbers(fakeLineNumbers));
     }
 
+    /**
+     * Omit debug info (SourceFile, LineNumberTable, LocalVariableTable) from generated classes.
+     * Takes precedence over {@link #fakeLineNumbers}.
+     */
+    public HiddenClassGenerator omitDebugInfo(boolean omitDebugInfo)
+    {
+        return new HiddenClassGenerator(lookup, byteCodeGenerator.omitDebugInfo(omitDebugInfo));
+    }
+
     public HiddenClassGenerator runAsmVerifier(boolean runAsmVerifier)
     {
         return new HiddenClassGenerator(lookup, byteCodeGenerator.runAsmVerifier(runAsmVerifier ? new LookupClassLoader(lookup) : null));

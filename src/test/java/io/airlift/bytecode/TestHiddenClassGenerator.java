@@ -171,4 +171,44 @@ class TestHiddenClassGenerator
             deleteRecursively(tempDir, ALLOW_INSECURE);
         }
     }
+
+    @Test
+    void testOmitDebugInfo()
+            throws Exception
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "io/airlift/bytecode/DebugExample",
+                type(Object.class));
+        classDefinition.visitSource("Example.java", null);
+
+        Parameter argA = arg("a", int.class);
+        Parameter argB = arg("b", int.class);
+
+        MethodDefinition method = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "add",
+                type(int.class),
+                ImmutableList.of(argA, argB));
+
+        Variable sum = method.getScope().declareVariable(int.class, "sum");
+        method.getBody()
+                .visitLineNumber(42)
+                .append(sum.set(add(argA, argB)))
+                .append(sum.ret());
+
+        StringWriter writer = new StringWriter();
+        Class<?> clazz = hiddenClassGenerator(lookup())
+                .omitDebugInfo(true)
+                .runAsmVerifier(true)
+                .dumpRawBytecode(true)
+                .outputTo(writer)
+                .defineHiddenClass(classDefinition, Object.class, Optional.empty());
+
+        assertThat(clazz.getMethod("add", int.class, int.class).invoke(null, 13, 42)).isEqualTo(55);
+        assertThat(writer.toString())
+                .doesNotContain("compiled from")
+                .doesNotContain("LINENUMBER")
+                .doesNotContain("LOCALVARIABLE");
+    }
 }

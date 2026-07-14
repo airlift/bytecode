@@ -121,4 +121,62 @@ class TestClassGenerator
             deleteRecursively(tempDir, ALLOW_INSECURE);
         }
     }
+
+    @Test
+    void testOmitDebugInfo()
+            throws Exception
+    {
+        StringWriter control = new StringWriter();
+        Class<?> clazz = classGenerator(getClass().getClassLoader())
+                .runAsmVerifier(true)
+                .dumpRawBytecode(true)
+                .outputTo(control)
+                .defineClass(exampleWithDebugInfo(), Object.class);
+
+        assertThat(clazz.getMethod("add", int.class, int.class).invoke(null, 13, 42)).isEqualTo(55);
+        assertThat(control.toString())
+                .contains("compiled from: Example.java")
+                .contains("LINENUMBER 42")
+                .contains("LOCALVARIABLE sum I");
+
+        StringWriter stripped = new StringWriter();
+        clazz = classGenerator(getClass().getClassLoader())
+                .omitDebugInfo(true)
+                .runAsmVerifier(true)
+                .dumpRawBytecode(true)
+                .outputTo(stripped)
+                .defineClass(exampleWithDebugInfo(), Object.class);
+
+        assertThat(clazz.getMethod("add", int.class, int.class).invoke(null, 13, 42)).isEqualTo(55);
+        assertThat(stripped.toString())
+                .doesNotContain("compiled from")
+                .doesNotContain("LINENUMBER")
+                .doesNotContain("LOCALVARIABLE");
+    }
+
+    private static ClassDefinition exampleWithDebugInfo()
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "test/DebugExample",
+                type(Object.class));
+        classDefinition.visitSource("Example.java", null);
+
+        Parameter argA = arg("a", int.class);
+        Parameter argB = arg("b", int.class);
+
+        MethodDefinition method = classDefinition.declareMethod(
+                a(PUBLIC, STATIC),
+                "add",
+                type(int.class),
+                ImmutableList.of(argA, argB));
+
+        Variable sum = method.getScope().declareVariable(int.class, "sum");
+        method.getBody()
+                .visitLineNumber(42)
+                .append(sum.set(add(argA, argB)))
+                .append(sum.ret());
+
+        return classDefinition;
+    }
 }
