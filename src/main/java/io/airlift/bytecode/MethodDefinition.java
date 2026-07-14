@@ -262,7 +262,7 @@ public class MethodDefinition
     {
         StringBuilder sb = new StringBuilder();
         Joiner.on(' ').appendTo(sb, access).append(' ');
-        sb.append(returnType.getJavaClassName()).append(' ');
+        sb.append(returnType.getJavaClassName()).append(' ').append(name);
         sb.append(parameters.stream().map(Parameter::getSourceString).collect(joining(", ", "(", ")")));
         return sb.toString();
     }
