@@ -14,6 +14,7 @@
 package io.airlift.bytecode;
 
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.Textifier;
@@ -36,6 +37,7 @@ import static java.util.Objects.requireNonNull;
 class ByteCodeGenerator
 {
     private final boolean fakeLineNumbers;
+    private final boolean omitDebugInfo;
     private final ClassLoader runAsmVerifierClassLoader;
     private final boolean dumpRawBytecode;
     private final Writer output;
@@ -43,17 +45,19 @@ class ByteCodeGenerator
 
     public static ByteCodeGenerator byteCodeGenerator()
     {
-        return new ByteCodeGenerator(false, null, false, nullWriter(), Optional.empty());
+        return new ByteCodeGenerator(false, false, null, false, nullWriter(), Optional.empty());
     }
 
     private ByteCodeGenerator(
             boolean fakeLineNumbers,
+            boolean omitDebugInfo,
             ClassLoader runAsmVerifierClassLoader,
             boolean dumpRawBytecode,
             Writer output,
             Optional<Path> dumpClassPath)
     {
         this.fakeLineNumbers = fakeLineNumbers;
+        this.omitDebugInfo = omitDebugInfo;
         this.runAsmVerifierClassLoader = runAsmVerifierClassLoader;
         this.dumpRawBytecode = dumpRawBytecode;
         this.output = requireNonNull(output, "output is null");
@@ -62,35 +66,49 @@ class ByteCodeGenerator
 
     public ByteCodeGenerator fakeLineNumbers(boolean fakeLineNumbers)
     {
-        return new ByteCodeGenerator(fakeLineNumbers, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
+        return new ByteCodeGenerator(fakeLineNumbers, omitDebugInfo, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
+    }
+
+    public ByteCodeGenerator omitDebugInfo(boolean omitDebugInfo)
+    {
+        return new ByteCodeGenerator(fakeLineNumbers, omitDebugInfo, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
     }
 
     public ByteCodeGenerator runAsmVerifier(ClassLoader runAsmVerifierClassLoader)
     {
-        return new ByteCodeGenerator(fakeLineNumbers, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
+        return new ByteCodeGenerator(fakeLineNumbers, omitDebugInfo, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
     }
 
     public ByteCodeGenerator dumpRawBytecode(boolean dumpRawBytecode)
     {
-        return new ByteCodeGenerator(fakeLineNumbers, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
+        return new ByteCodeGenerator(fakeLineNumbers, omitDebugInfo, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
     }
 
     public ByteCodeGenerator outputTo(Writer output)
     {
-        return new ByteCodeGenerator(fakeLineNumbers, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
+        return new ByteCodeGenerator(fakeLineNumbers, omitDebugInfo, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
     }
 
     public ByteCodeGenerator dumpClassFilesTo(Optional<Path> dumpClassPath)
     {
-        return new ByteCodeGenerator(fakeLineNumbers, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
+        return new ByteCodeGenerator(fakeLineNumbers, omitDebugInfo, runAsmVerifierClassLoader, dumpRawBytecode, output, dumpClassPath);
     }
 
     public byte[] generateByteCode(ClassInfoLoader classInfoLoader, ClassDefinition classDefinition)
     {
         ClassWriter writer = new SmartClassWriter(classInfoLoader);
 
+        // omitting debug info takes precedence over fake line numbers, which would be stripped anyway
+        ClassVisitor visitor = writer;
+        if (omitDebugInfo) {
+            visitor = new OmitDebugInfoClassVisitor(visitor);
+        }
+        else if (fakeLineNumbers) {
+            visitor = new AddFakeLineNumberClassVisitor(visitor);
+        }
+
         try {
-            classDefinition.visit(fakeLineNumbers ? new AddFakeLineNumberClassVisitor(writer) : writer);
+            classDefinition.visit(visitor);
         }
         catch (IndexOutOfBoundsException | NegativeArraySizeException e) {
             StringWriter out = new StringWriter();
