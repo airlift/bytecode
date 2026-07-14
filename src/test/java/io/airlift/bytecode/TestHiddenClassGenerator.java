@@ -114,7 +114,7 @@ class TestHiddenClassGenerator
         assertThat(binder.getBindings()).containsExactly(message, addExact);
 
         Class<?> clazz = hiddenClassGenerator(lookup())
-                .defineHiddenClass(classDefinition, Object.class, Optional.of(binder.getBindings()));
+                .defineHiddenClass(classDefinition, Object.class, binder);
 
         assertThat(clazz.getMethod("message").invoke(null)).isSameAs(message);
         assertThat(clazz.getMethod("sameMessage").invoke(null)).isSameAs(message);

@@ -16,9 +16,11 @@ package io.airlift.bytecode;
 import java.io.Writer;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 
 import static io.airlift.bytecode.ClassInfoLoader.createClassInfoLoader;
+import static java.util.Objects.requireNonNull;
 
 public class HiddenClassGenerator
 {
@@ -64,6 +66,17 @@ public class HiddenClassGenerator
     public HiddenClassGenerator dumpClassFilesTo(Optional<Path> dumpClassPath)
     {
         return new HiddenClassGenerator(lookup, byteCodeGenerator.dumpClassFilesTo(dumpClassPath));
+    }
+
+    /**
+     * Defines the class with the binder's bound objects as its class data. A binder
+     * with no bindings defines the class without class data.
+     */
+    public <T> Class<? extends T> defineHiddenClass(ClassDefinition classDefinition, Class<T> superType, ClassDataBinder binder)
+    {
+        requireNonNull(binder, "binder is null");
+        List<Object> bindings = binder.getBindings();
+        return defineHiddenClass(classDefinition, superType, bindings.isEmpty() ? Optional.empty() : Optional.of(bindings));
     }
 
     public <T> Class<? extends T> defineHiddenClass(ClassDefinition classDefinition, Class<T> superType, Optional<Object> classData)
