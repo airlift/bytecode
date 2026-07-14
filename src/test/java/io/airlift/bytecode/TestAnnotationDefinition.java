@@ -73,9 +73,37 @@ class TestAnnotationDefinition
         assertThat(annotation.value()).containsExactly("a", "b");
     }
 
+    @Test
+    void testEnumAnnotationValue()
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "test/EnumAnnotationExample",
+                type(Object.class));
+        classDefinition.declareDefaultConstructor(a(PUBLIC));
+        classDefinition.declareAnnotation(EnumValues.class)
+                .setValue("single", RetentionPolicy.CLASS)
+                .setValue("multiple", ImmutableList.of(RetentionPolicy.SOURCE, RetentionPolicy.RUNTIME));
+
+        Class<?> clazz = classGenerator(getClass().getClassLoader())
+                .defineClass(classDefinition, Object.class);
+
+        EnumValues annotation = clazz.getAnnotation(EnumValues.class);
+        assertThat(annotation.single()).isEqualTo(RetentionPolicy.CLASS);
+        assertThat(annotation.multiple()).containsExactly(RetentionPolicy.SOURCE, RetentionPolicy.RUNTIME);
+    }
+
     @Retention(RetentionPolicy.RUNTIME)
     public @interface StringValues
     {
         String[] value();
+    }
+
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface EnumValues
+    {
+        RetentionPolicy single();
+
+        RetentionPolicy[] multiple();
     }
 }
