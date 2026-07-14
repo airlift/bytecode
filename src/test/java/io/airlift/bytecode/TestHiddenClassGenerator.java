@@ -14,6 +14,7 @@
 package io.airlift.bytecode;
 
 import com.google.common.collect.ImmutableList;
+import io.airlift.bytecode.ClassDataBinder.BoundMethodHandle;
 import org.junit.jupiter.api.Test;
 
 import java.io.StringWriter;
@@ -35,10 +36,12 @@ import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.BytecodeExpressions.add;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantClassData;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantClassDataAt;
+import static io.airlift.bytecode.expression.BytecodeExpressions.constantString;
 import static java.lang.invoke.MethodHandles.lookup;
 import static java.lang.invoke.MethodType.methodType;
 import static java.nio.file.Files.createTempDirectory;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TestHiddenClassGenerator
 {
@@ -119,6 +122,54 @@ class TestHiddenClassGenerator
         assertThat(clazz.getMethod("message").invoke(null)).isSameAs(message);
         assertThat(clazz.getMethod("sameMessage").invoke(null)).isSameAs(message);
         assertThat(clazz.getMethod("add", int.class, int.class).invoke(null, 13, 42)).isEqualTo(55);
+    }
+
+    @Test
+    void testBoundMethodHandle()
+            throws Exception
+    {
+        ClassDefinition classDefinition = new ClassDefinition(
+                a(PUBLIC, FINAL),
+                "io/airlift/bytecode/BoundHandleExample",
+                type(Object.class));
+
+        ClassDataBinder binder = new ClassDataBinder();
+        MethodHandle addExact = lookup().findStatic(Math.class, "addExact", methodType(int.class, int.class, int.class));
+
+        Parameter argA = arg("a", int.class);
+        Parameter argB = arg("b", int.class);
+        classDefinition.declareMethod(a(PUBLIC, STATIC), "add", type(int.class), ImmutableList.of(argA, argB))
+                .getBody()
+                .append(binder.bindHandle(addExact).invoke(argA, argB).ret());
+
+        // binding the same handle again reuses its class data slot
+        classDefinition.declareMethod(a(PUBLIC, STATIC), "addAgain", type(int.class), ImmutableList.of(argA, argB))
+                .getBody()
+                .append(binder.bindHandle(addExact).invoke(argA, argB).ret());
+
+        // the raw handle can be loaded for callers that place it on the stack themselves
+        classDefinition.declareMethod(a(PUBLIC, STATIC), "handle", type(MethodHandle.class))
+                .getBody()
+                .append(binder.bindHandle(addExact).handle().ret());
+
+        assertThat(binder.getBindings()).containsExactly(addExact);
+
+        // invocation arguments are checked against the handle type at generation time
+        BoundMethodHandle bound = binder.bindHandle(addExact);
+        assertThat(bound.type()).isEqualTo(methodType(int.class, int.class, int.class));
+        assertThatThrownBy(() -> bound.invoke(argA))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Expected 2 arguments");
+        assertThatThrownBy(() -> bound.invoke(argA, constantString("wrong")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Expected argument 1 to have type");
+
+        Class<?> clazz = hiddenClassGenerator(lookup())
+                .defineHiddenClass(classDefinition, Object.class, binder);
+
+        assertThat(clazz.getMethod("add", int.class, int.class).invoke(null, 13, 42)).isEqualTo(55);
+        assertThat(clazz.getMethod("addAgain", int.class, int.class).invoke(null, 20, 22)).isEqualTo(42);
+        assertThat(clazz.getMethod("handle").invoke(null)).isSameAs(addExact);
     }
 
     @Test
