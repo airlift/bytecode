@@ -39,7 +39,6 @@ public class AnnotationDefinition
             .add(Class.class)
             .add(ParameterizedType.class)
             .add(AnnotationDefinition.class)
-            .add(Enum.class)
             .build();
 
     private final ParameterizedType type;
@@ -155,12 +154,19 @@ public class AnnotationDefinition
                 checkArgument(v != null, "List contains a null element");
                 // annotation members hold only one-dimensional arrays
                 checkArgument(!(v instanceof List), "List contains a nested list");
-                checkArgument(ALLOWED_TYPES.contains(v.getClass()), "List contains invalid type %s", v.getClass());
+                checkArgument(isAllowedType(v), "List contains invalid type %s", v.getClass());
             }
         }
         else {
-            checkArgument(ALLOWED_TYPES.contains(value.getClass()), "Invalid value type %s", value.getClass());
+            checkArgument(isAllowedType(value), "Invalid value type %s", value.getClass());
         }
+    }
+
+    private static boolean isAllowedType(Object value)
+    {
+        // an enum constant's class is the enum type, or an anonymous subclass
+        // for constants with a body, so enums cannot be checked with a type set
+        return value instanceof Enum || ALLOWED_TYPES.contains(value.getClass());
     }
 
     public void visitClassAnnotation(ClassVisitor visitor)
@@ -209,7 +215,7 @@ public class AnnotationDefinition
         }
         else if (value instanceof Enum) {
             Enum<?> enumConstant = (Enum<?>) value;
-            visitor.visitEnum(name, type(enumConstant.getDeclaringClass()).getClassName(), enumConstant.name());
+            visitor.visitEnum(name, type(enumConstant.getDeclaringClass()).getType(), enumConstant.name());
         }
         else if (value instanceof ParameterizedType) {
             ParameterizedType parameterizedType = (ParameterizedType) value;
