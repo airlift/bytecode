@@ -16,11 +16,14 @@ package io.airlift.bytecode;
 import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.expression.BytecodeExpression;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.expression.BytecodeExpressions.constantClassDataAt;
 import static java.util.Objects.requireNonNull;
@@ -34,12 +37,12 @@ import static java.util.Objects.requireNonNull;
  * ClassDataBinder binder = new ClassDataBinder();
  *
  * method.getBody()
- *         .append(binder.bind(methodHandle, MethodHandle.class)
- *                 .invoke("invokeExact", long.class, argument)
+ *         .append(binder.bindHandle(methodHandle)
+ *                 .invoke(argument)
  *                 .ret());
  *
  * hiddenClassGenerator(lookup)
- *         .defineHiddenClass(classDefinition, superType, Optional.of(binder.getBindings()));
+ *         .defineHiddenClass(classDefinition, superType, binder);
  * }</pre>
  *
  * Bindings are deduplicated by identity: binding the same object again reuses
@@ -70,10 +73,69 @@ public final class ClassDataBinder
     }
 
     /**
+     * Binds a method handle to be invoked exactly by the generated code.
+     */
+    public BoundMethodHandle bindHandle(MethodHandle handle)
+    {
+        requireNonNull(handle, "handle is null");
+        return new BoundMethodHandle(bind(handle, MethodHandle.class), handle.type());
+    }
+
+    /**
      * The bound objects, to be passed as the class data when defining the hidden class.
      */
     public List<Object> getBindings()
     {
         return ImmutableList.copyOf(bindings);
+    }
+
+    /**
+     * A method handle bound as a class data constant.
+     */
+    public static final class BoundMethodHandle
+    {
+        private final BytecodeExpression handle;
+        private final MethodType type;
+
+        private BoundMethodHandle(BytecodeExpression handle, MethodType type)
+        {
+            this.handle = handle;
+            this.type = type;
+        }
+
+        public MethodType type()
+        {
+            return type;
+        }
+
+        /**
+         * Loads the bound method handle, for callers that must place it on the stack
+         * themselves, e.g. below arguments that are already being pushed.
+         */
+        public BytecodeExpression handle()
+        {
+            return handle;
+        }
+
+        public BytecodeExpression invoke(BytecodeExpression... arguments)
+        {
+            return invoke(ImmutableList.copyOf(arguments));
+        }
+
+        /**
+         * Invokes the bound method handle exactly with the given arguments. The
+         * argument types must match the handle type exactly, as the invocation
+         * does not adapt arguments.
+         */
+        public BytecodeExpression invoke(List<BytecodeExpression> arguments)
+        {
+            checkArgument(arguments.size() == type.parameterCount(), "Expected %s arguments, but got %s", type.parameterCount(), arguments.size());
+            for (int i = 0; i < arguments.size(); i++) {
+                ParameterizedType expected = ParameterizedType.type(type.parameterType(i));
+                ParameterizedType actual = arguments.get(i).getType();
+                checkArgument(expected.equals(actual), "Expected argument %s to have type %s, but got %s", i, expected, actual);
+            }
+            return handle.invoke("invokeExact", type.returnType(), arguments);
+        }
     }
 }
