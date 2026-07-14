@@ -152,10 +152,10 @@ public class AnnotationDefinition
         if (value instanceof List) {
             // todo verify list contains single type
             for (Object v : (List<Object>) value) {
+                checkArgument(v != null, "List contains a null element");
+                // annotation members hold only one-dimensional arrays
+                checkArgument(!(v instanceof List), "List contains a nested list");
                 checkArgument(ALLOWED_TYPES.contains(v.getClass()), "List contains invalid type %s", v.getClass());
-                if (v instanceof List) {
-                    isValidType(value);
-                }
             }
         }
         else {
