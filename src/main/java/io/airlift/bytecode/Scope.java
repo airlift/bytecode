@@ -15,7 +15,6 @@ package io.airlift.bytecode;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.bytecode.expression.BytecodeExpression;
-import org.objectweb.asm.Type;
 
 import java.util.ArrayList;
 import java.util.Deque;
@@ -69,7 +68,7 @@ public class Scope
     {
         // reserve a slot for this variable
         Variable variable = new Variable("temp_" + nextTempVariableId, type(type));
-        nextTempVariableId += Type.getType(type(type).getType()).getSize();
+        nextTempVariableId += variable.getType().getSlotSize();
 
         tempVariables.put(variable.getName(), variable);
         allVariables.add(variable);
