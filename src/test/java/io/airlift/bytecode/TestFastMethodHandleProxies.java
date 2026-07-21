@@ -14,11 +14,14 @@
 package io.airlift.bytecode;
 
 import com.google.common.base.VerifyException;
+import io.airlift.bytecode.fixture.IsolatedAdder;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleProxies;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MutableCallSite;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -248,6 +251,115 @@ class TestFastMethodHandleProxies
         int first();
 
         int second();
+    }
+
+    /**
+     * The lookup overload exists so that callers can proxy interfaces their own loader can
+     * see but this library's cannot. The fixture package is reloaded in an isolated loader,
+     * which yields an interface distinct from the one on the test classpath and unreachable
+     * from the loader that defined {@link FastMethodHandleProxies}.
+     */
+    @Test
+    void testInterfaceInvisibleToLibraryLoader()
+            throws ReflectiveOperationException
+    {
+        IsolatedClassLoader isolated = new IsolatedClassLoader(getClass().getClassLoader(), "io.airlift.bytecode.fixture.");
+        Class<?> isolatedAdder = isolated.loadClass("io.airlift.bytecode.fixture.IsolatedAdder");
+        Lookup isolatedLookup = (Lookup) isolated.loadClass("io.airlift.bytecode.fixture.IsolatedLookup")
+                .getMethod("lookup").invoke(null);
+
+        // the isolated interface really is a different class than the one this test compiled against
+        assertThat(isolatedAdder).isNotSameAs(IsolatedAdder.class);
+        assertThat(isolatedAdder.getClassLoader()).isSameAs(isolated);
+        // and the library's own loader resolves that name to a different class
+        assertThat(FastMethodHandleProxies.class.getClassLoader().loadClass(isolatedAdder.getName()))
+                .isNotSameAs(isolatedAdder);
+
+        MethodHandle target = lookup().findStatic(getClass(), "add", methodType(int.class, int.class, int.class));
+        Object proxy = FastMethodHandleProxies.asInterfaceInstance(isolatedLookup, "Adder", isolatedAdder, target);
+
+        assertThat(isolatedAdder.isInstance(proxy)).isTrue();
+        assertThat(proxy.getClass().isHidden()).isTrue();
+        // the proxy is defined in the lookup's loader and package, which is how it sees the interface
+        assertThat(proxy.getClass().getClassLoader()).isSameAs(isolated);
+        assertThat(proxy.getClass().getPackageName()).isEqualTo("io.airlift.bytecode.fixture");
+        assertThat(isolatedAdder.getMethod("add", int.class, int.class).invoke(proxy, 13, 42)).isEqualTo(55);
+    }
+
+    /**
+     * The counterpart to {@link #testInterfaceInvisibleToLibraryLoader()}: without a caller
+     * lookup the proxy lands in this library's loader, which cannot see the isolated interface.
+     */
+    @Test
+    void testInterfaceInvisibleToLibraryLoaderIsRejected()
+            throws ReflectiveOperationException
+    {
+        IsolatedClassLoader isolated = new IsolatedClassLoader(getClass().getClassLoader(), "io.airlift.bytecode.fixture.");
+        Class<?> isolatedAdder = isolated.loadClass("io.airlift.bytecode.fixture.IsolatedAdder");
+
+        MethodHandle target = lookup().findStatic(getClass(), "add", methodType(int.class, int.class, int.class));
+        assertThatThrownBy(() -> FastMethodHandleProxies.asInterfaceInstance(isolatedAdder, target))
+                .isInstanceOf(ClassCastException.class);
+    }
+
+    private static int add(int a, int b)
+    {
+        return a + b;
+    }
+
+    /**
+     * Loads classes under a package prefix itself rather than delegating, so they are
+     * distinct from, and invisible to, the classes the parent loader defines.
+     */
+    private static final class IsolatedClassLoader
+            extends ClassLoader
+    {
+        private final String packagePrefix;
+
+        private IsolatedClassLoader(ClassLoader parent, String packagePrefix)
+        {
+            super(parent);
+            this.packagePrefix = packagePrefix;
+        }
+
+        @Override
+        protected Class<?> loadClass(String name, boolean resolve)
+                throws ClassNotFoundException
+        {
+            if (!name.startsWith(packagePrefix)) {
+                return super.loadClass(name, resolve);
+            }
+            synchronized (getClassLoadingLock(name)) {
+                Class<?> loaded = findLoadedClass(name);
+                if (loaded == null) {
+                    loaded = defineClass(name, readClassBytes(name));
+                }
+                if (resolve) {
+                    resolveClass(loaded);
+                }
+                return loaded;
+            }
+        }
+
+        private Class<?> defineClass(String name, byte[] bytes)
+        {
+            return defineClass(name, bytes, 0, bytes.length);
+        }
+
+        private byte[] readClassBytes(String name)
+                throws ClassNotFoundException
+        {
+            String resource = name.replace('.', '/') + ".class";
+            try (InputStream input = getParent().getResourceAsStream(resource)) {
+                if (input == null) {
+                    throw new ClassNotFoundException(name);
+                }
+                return input.readAllBytes();
+            }
+            catch (IOException e) {
+                throw new ClassNotFoundException(name, e);
+            }
+        }
     }
 
     private static <T> void assertInterface(Class<T> interfaceType, MethodHandle target, Consumer<T> consumer)
