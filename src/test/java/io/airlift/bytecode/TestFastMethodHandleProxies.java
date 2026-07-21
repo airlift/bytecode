@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleProxies;
 import java.lang.invoke.MutableCallSite;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
@@ -155,6 +156,98 @@ class TestFastMethodHandleProxies
     private static int two()
     {
         return 2;
+    }
+
+    @Test
+    void testHiddenClass()
+            throws ReflectiveOperationException
+    {
+        MethodHandle target = lookup().findStatic(getClass(), "one", methodType(int.class));
+        IntSupplier supplier = FastMethodHandleProxies.asInterfaceInstance(IntSupplier.class, target);
+
+        Class<?> proxyClass = supplier.getClass();
+        assertThat(proxyClass.isHidden()).isTrue();
+        // a hidden class lives in the runtime package of its lookup class
+        assertThat(proxyClass.getPackageName()).isEqualTo(FastMethodHandleProxies.class.getPackageName());
+        // and is not discoverable by name
+        assertThatThrownBy(() -> Class.forName(proxyClass.getName()))
+                .isInstanceOf(ClassNotFoundException.class);
+    }
+
+    @Test
+    void testClassNameIsUsedAsStem()
+            throws ReflectiveOperationException
+    {
+        MethodHandle target = lookup().findStatic(getClass(), "one", methodType(int.class));
+        IntSupplier supplier = FastMethodHandleProxies.asInterfaceInstance("MyProxy", IntSupplier.class, target);
+
+        // the JVM appends "/0x..." to make the name unique, so the requested name is only a stem
+        assertThat(supplier.getClass().getName())
+                .startsWith(FastMethodHandleProxies.class.getPackageName() + ".MyProxy/");
+    }
+
+    @Test
+    void testProxyClassIsUnloaded()
+            throws ReflectiveOperationException, InterruptedException
+    {
+        MethodHandle target = lookup().findStatic(getClass(), "one", methodType(int.class));
+
+        WeakReference<Class<?>> proxyClass = createProxyClassReference(target);
+
+        // the proxy is unreachable, so its hidden class must become collectable
+        for (int i = 0; i < 100 && proxyClass.get() != null; i++) {
+            System.gc();
+            Thread.sleep(10);
+        }
+        assertThat(proxyClass.get()).isNull();
+    }
+
+    private static WeakReference<Class<?>> createProxyClassReference(MethodHandle target)
+    {
+        IntSupplier supplier = FastMethodHandleProxies.asInterfaceInstance(IntSupplier.class, target);
+        assertThat(supplier.getAsInt()).isEqualTo(1);
+        return new WeakReference<>(supplier.getClass());
+    }
+
+    @Test
+    void testNonPublicInterface()
+            throws ReflectiveOperationException
+    {
+        MethodHandle target = lookup().findStatic(getClass(), "one", methodType(int.class));
+        assertThatThrownBy(() -> FastMethodHandleProxies.asInterfaceInstance(PackagePrivate.class, target))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("not a public interface");
+    }
+
+    interface PackagePrivate
+    {
+        int value();
+    }
+
+    @Test
+    void testNotAnInterface()
+            throws ReflectiveOperationException
+    {
+        MethodHandle target = lookup().findStatic(getClass(), "one", methodType(int.class));
+        assertThatThrownBy(() -> FastMethodHandleProxies.asInterfaceInstance(String.class, target))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("not a public interface");
+    }
+
+    @Test
+    void testMultipleAbstractMethods()
+            throws ReflectiveOperationException
+    {
+        MethodHandle target = lookup().findStatic(getClass(), "one", methodType(int.class));
+        assertThatThrownBy(() -> FastMethodHandleProxies.asInterfaceInstance(TwoMethods.class, target))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    public interface TwoMethods
+    {
+        int first();
+
+        int second();
     }
 
     private static <T> void assertInterface(Class<T> interfaceType, MethodHandle target, Consumer<T> consumer)
