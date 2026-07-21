@@ -14,43 +14,37 @@
 package io.airlift.bytecode;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.airlift.bytecode.control.TryCatch;
 import io.airlift.bytecode.control.TryCatch.CatchBlock;
 
-import java.lang.invoke.CallSite;
-import java.lang.invoke.ConstantCallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleProxies;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.IntStream;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.MoreCollectors.onlyElement;
 import static io.airlift.bytecode.Access.FINAL;
 import static io.airlift.bytecode.Access.PUBLIC;
 import static io.airlift.bytecode.Access.SYNTHETIC;
 import static io.airlift.bytecode.Access.a;
-import static io.airlift.bytecode.ClassGenerator.classGenerator;
-import static io.airlift.bytecode.FastMethodHandleProxies.Bootstrap.BOOTSTRAP_METHOD;
+import static io.airlift.bytecode.HiddenClassGenerator.hiddenClassGenerator;
 import static io.airlift.bytecode.Parameter.arg;
 import static io.airlift.bytecode.ParameterizedType.type;
 import static io.airlift.bytecode.ParameterizedType.typeFromJavaClassName;
-import static io.airlift.bytecode.expression.BytecodeExpressions.invokeDynamic;
+import static java.lang.invoke.MethodHandles.lookup;
 import static java.lang.invoke.MethodType.methodType;
 import static java.util.Arrays.stream;
+import static java.util.Objects.requireNonNull;
 
 public final class FastMethodHandleProxies
 {
-    private static final AtomicLong CLASS_ID = new AtomicLong();
-
     private FastMethodHandleProxies() {}
 
     /**
@@ -63,8 +57,7 @@ public final class FastMethodHandleProxies
      */
     public static <T> T asInterfaceInstance(Class<T> type, MethodHandle target)
     {
-        String className = "$gen." + type.getName() + "_" + CLASS_ID.incrementAndGet();
-        return asInterfaceInstance(className, type, target);
+        return asInterfaceInstance(type.getSimpleName(), type, target);
     }
 
     /**
@@ -78,11 +71,32 @@ public final class FastMethodHandleProxies
      */
     public static <T> T asInterfaceInstance(String className, Class<T> type, MethodHandle target)
     {
+        return asInterfaceInstance(lookup(), className, type, target);
+    }
+
+    /**
+     * Faster version of {@link MethodHandleProxies#asInterfaceInstance(Class, MethodHandle)}.
+     * <p>
+     * The proxy is defined as a hidden class in the runtime package of the lookup class, so
+     * {@code type} must be visible from the lookup class rather than from this library.
+     *
+     * @param <T> the desired type of the wrapper, a single-method interface
+     * @param lookup the lookup used to define the proxy class
+     * @param className the name of the generated class
+     * @param type a class object representing {@code T}
+     * @param target the method handle to invoke from the wrapper
+     * @return a correctly-typed wrapper for the given target
+     */
+    public static <T> T asInterfaceInstance(Lookup lookup, String className, Class<T> type, MethodHandle target)
+    {
+        requireNonNull(lookup, "lookup is null");
+        requireNonNull(className, "className is null");
+        requireNonNull(target, "target is null");
         checkArgument(type.isInterface() && Modifier.isPublic(type.getModifiers()), "not a public interface: %s", type.getName());
 
         ClassDefinition classDefinition = new ClassDefinition(
                 a(PUBLIC, FINAL, SYNTHETIC),
-                typeFromJavaClassName(className),
+                typeFromJavaClassName(hiddenClassName(lookup, className)),
                 type(Object.class),
                 type(type));
 
@@ -92,10 +106,9 @@ public final class FastMethodHandleProxies
         Class<?>[] parameterTypes = method.getParameterTypes();
         MethodHandle adaptedTarget = target.asType(methodType(method.getReturnType(), parameterTypes));
 
-        List<Parameter> parameters = new ArrayList<>();
-        for (int i = 0; i < parameterTypes.length; i++) {
-            parameters.add(arg("arg" + i, parameterTypes[i]));
-        }
+        List<Parameter> parameters = IntStream.range(0, parameterTypes.length)
+                .mapToObj(i -> arg("arg" + i, parameterTypes[i]))
+                .collect(toImmutableList());
 
         MethodDefinition methodDefinition = classDefinition.declareMethod(
                 a(PUBLIC),
@@ -103,14 +116,8 @@ public final class FastMethodHandleProxies
                 type(method.getReturnType()),
                 parameters);
 
-        BytecodeNode invocation = invokeDynamic(
-                BOOTSTRAP_METHOD,
-                ImmutableList.of(),
-                method.getName(),
-                method.getReturnType(),
-                parameters)
-                .ret();
-
+        // unchecked throwables and exceptions declared by the interface method propagate
+        // as-is; anything else is wrapped, matching MethodHandleProxies
         ImmutableList.Builder<ParameterizedType> exceptionTypes = ImmutableList.builder();
         exceptionTypes.add(type(RuntimeException.class), type(Error.class));
         for (Class<?> exceptionType : method.getExceptionTypes()) {
@@ -125,23 +132,35 @@ public final class FastMethodHandleProxies
                 .invokeConstructor(UndeclaredThrowableException.class, Throwable.class)
                 .throwObject();
 
-        invocation = new TryCatch(invocation, ImmutableList.of(
+        ClassDataBinder binder = new ClassDataBinder();
+        BytecodeNode invocation = binder.bindHandle(adaptedTarget)
+                .invoke(ImmutableList.copyOf(parameters))
+                .ret();
+
+        methodDefinition.getBody().append(new TryCatch(invocation, ImmutableList.of(
                 new CatchBlock(new BytecodeBlock().throwObject(), exceptionTypes.build()),
-                new CatchBlock(throwUndeclared, ImmutableList.of())));
+                new CatchBlock(throwUndeclared, ImmutableList.of()))));
 
-        methodDefinition.getBody().append(invocation);
-
-        // note this will not work if interface class is not visible from this class loader,
-        // but we must use this class loader to ensure the bootstrap method is visible
-        ClassLoader targetClassLoader = FastMethodHandleProxies.class.getClassLoader();
-        DynamicClassLoader dynamicClassLoader = new DynamicClassLoader(targetClassLoader, ImmutableMap.of(0L, adaptedTarget));
-        Class<? extends T> newClass = classGenerator(dynamicClassLoader).defineClass(classDefinition, type);
+        Class<? extends T> newClass = hiddenClassGenerator(lookup)
+                .defineHiddenClass(classDefinition, type, binder);
         try {
             return newClass.getDeclaredConstructor().newInstance();
         }
         catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * A hidden class must be defined in the runtime package of its lookup class, so the
+     * caller's name is used only as the stem. The JVM appends a unique suffix, which makes
+     * the stem unique without a counter.
+     */
+    private static String hiddenClassName(Lookup lookup, String className)
+    {
+        String stem = className.replace('.', '$').replace('/', '$');
+        String packageName = lookup.lookupClass().getPackageName();
+        return packageName.isEmpty() ? stem : packageName + "." + stem;
     }
 
     private static <T> Method getSingleAbstractMethod(Class<T> type)
@@ -167,28 +186,5 @@ public final class FastMethodHandleProxies
                 method.getReturnType() != returnType ||
                 !name.equals(method.getName()) ||
                 !Arrays.equals(method.getParameterTypes(), parameterTypes);
-    }
-
-    public static final class Bootstrap
-    {
-        public static final Method BOOTSTRAP_METHOD;
-
-        static {
-            try {
-                BOOTSTRAP_METHOD = Bootstrap.class.getMethod("bootstrap", MethodHandles.Lookup.class, String.class, MethodType.class);
-            }
-            catch (NoSuchMethodException e) {
-                throw new AssertionError(e);
-            }
-        }
-
-        private Bootstrap() {}
-
-        @SuppressWarnings("unused")
-        public static CallSite bootstrap(MethodHandles.Lookup callerLookup, String name, MethodType type)
-        {
-            DynamicClassLoader classLoader = (DynamicClassLoader) callerLookup.lookupClass().getClassLoader();
-            return new ConstantCallSite(classLoader.getCallSiteBindings().get(0L));
-        }
     }
 }
