@@ -11,6 +11,7 @@
     <artifactId>bytecode</artifactId>
     <version>1.7-SNAPSHOT</version>
 
+    <name>bytecode</name>
     <description>High-level library for generating JVM bytecode</description>
     <url>https://github.com/airlift/bytecode</url>
 
