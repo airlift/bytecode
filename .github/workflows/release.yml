@@ -40,6 +40,15 @@ jobs:
           git config user.name "Airlift Release"
           git config user.email "airlift-bot@airlift.io"
 
+      - name: Verify release configuration
+        env:
+          MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_NEXUS2_MAVEN_CENTRAL_USERNAME }}
+          MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_NEXUS2_MAVEN_CENTRAL_TOKEN }}
+        run: |
+          ./mvnw -B njord:status | tee "${RUNNER_TEMP}/njord-status.log"
+          grep -F "Repository Auth: Present" "${RUNNER_TEMP}/njord-status.log"
+          grep -F "Effective URL: njord:template:release-sca" "${RUNNER_TEMP}/njord-status.log"
+
       - name: Prepare release
         env:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
