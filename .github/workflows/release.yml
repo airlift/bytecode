@@ -1,0 +1,88 @@
+name: Release new version
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Check release branch
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/master" ]; then
+            echo "Release is only allowed from master"
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: 25
+          distribution: temurin
+          gpg-private-key: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+          cache: maven
+
+      - name: Configure Git
+        run: |
+          git config user.name "Airlift Release"
+          git config user.email "airlift-bot@airlift.io"
+
+      - name: Prepare release
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
+        run: ./mvnw -B release:prepare -Poss-release
+
+      - name: Determine release version
+        run: |
+          VERSION=$(grep 'scm.tag=' release.properties | cut -d'=' -f2)
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Releasing version: ${VERSION}"
+
+      - name: Stage release
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
+        run: ./mvnw -B release:perform -Poss-release
+
+      - name: Validate release
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
+          MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_NEXUS2_MAVEN_CENTRAL_USERNAME }}
+          MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_NEXUS2_MAVEN_CENTRAL_TOKEN }}
+        run: |
+          ./mvnw njord:list
+          ./mvnw njord:status
+          ./mvnw njord:validate
+
+      - name: Publish release
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
+          MAVENCENTRAL_USERNAME: ${{ secrets.JRELEASER_NEXUS2_MAVEN_CENTRAL_USERNAME }}
+          MAVENCENTRAL_PASSWORD: ${{ secrets.JRELEASER_NEXUS2_MAVEN_CENTRAL_TOKEN }}
+        run: ./mvnw njord:publish -Poss-release
+
+      - name: Push release commits and tags
+        run: |
+          git push origin master
+          git push origin --tags
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${VERSION}" \
+              --repo="$GITHUB_REPOSITORY" \
+              --title="${GITHUB_REPOSITORY#*/} ${VERSION}" \
+              --generate-notes
