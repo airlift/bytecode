@@ -298,7 +298,11 @@ public class MethodDefinition
             List<ParameterizedType> parameterTypes)
     {
         StringBuilder sb = new StringBuilder();
-        sb.append(parameterTypes.stream().map(ParameterizedType::getType).collect(joining("", "(", ")")));
+        sb.append('(');
+        for (ParameterizedType parameterType : parameterTypes) {
+            sb.append(parameterType.getType());
+        }
+        sb.append(')');
         sb.append(returnType.getType());
         return sb.toString();
     }
@@ -314,8 +318,13 @@ public class MethodDefinition
             ParameterizedType returnType,
             List<ParameterizedType> parameterTypes)
     {
-        return parameterTypes.stream()
-                .map(ParameterizedType::toString)
-                .collect(joining("", "(", ")")) + returnType;
+        StringBuilder sb = new StringBuilder();
+        sb.append('(');
+        for (ParameterizedType parameterType : parameterTypes) {
+            sb.append(parameterType);
+        }
+        sb.append(')');
+        sb.append(returnType);
+        return sb.toString();
     }
 }
