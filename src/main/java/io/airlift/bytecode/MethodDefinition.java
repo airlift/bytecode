@@ -16,6 +16,7 @@ package io.airlift.bytecode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
+import jakarta.annotation.Nullable;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.tree.InsnNode;
@@ -49,6 +50,10 @@ public class MethodDefinition
 
     private final BytecodeBlock body;
     private String comment;
+
+    // cache of a deterministic computation; the benign race is harmless
+    @Nullable
+    private String methodDescriptor;
 
     public MethodDefinition(
             ClassDefinition declaringClass,
@@ -169,7 +174,12 @@ public class MethodDefinition
 
     public String getMethodDescriptor()
     {
-        return methodDescription(returnType, parameterTypes);
+        String descriptor = methodDescriptor;
+        if (descriptor == null) {
+            descriptor = methodDescription(returnType, parameterTypes);
+            methodDescriptor = descriptor;
+        }
+        return descriptor;
     }
 
     public BytecodeBlock getBody()
