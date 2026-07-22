@@ -44,16 +44,14 @@ package io.airlift.bytecode;
 
 import com.google.common.collect.ImmutableList;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkState;
+import static io.airlift.bytecode.Access.toAccessModifier;
 import static io.airlift.bytecode.ParameterizedType.type;
-import static io.airlift.bytecode.ParameterizedType.typeFromPathName;
 import static java.util.Objects.requireNonNull;
+import static org.objectweb.asm.Opcodes.ACC_SUPER;
 
 /**
  * @author Eugene Kuleshov
@@ -67,16 +65,14 @@ public class ClassInfo
     private final int access;
     private final ParameterizedType superClass;
     private final List<ParameterizedType> interfaces;
-    private final List<MethodNode> methods;
 
-    public ClassInfo(ClassInfoLoader loader, ClassNode classNode)
+    public ClassInfo(ClassInfoLoader loader, ClassDefinition classDefinition)
     {
         this(loader,
-                typeFromPathName(classNode.name),
-                classNode.access,
-                classNode.superName == null ? null : typeFromPathName(classNode.superName),
-                classNode.interfaces.stream().map(ParameterizedType::typeFromPathName).toList(),
-                classNode.methods);
+                classDefinition.getType(),
+                classAccessModifier(classDefinition),
+                classDefinition.getSuperClass(),
+                classDefinition.getInterfaces());
     }
 
     public ClassInfo(ClassInfoLoader loader, Class<?> aClass)
@@ -85,11 +81,10 @@ public class ClassInfo
                 type(aClass),
                 aClass.getModifiers(),
                 aClass.getSuperclass() == null ? null : type(aClass.getSuperclass()),
-                Arrays.stream(aClass.getInterfaces()).map(ParameterizedType::type).toList(),
-                null);
+                Arrays.stream(aClass.getInterfaces()).map(ParameterizedType::type).toList());
     }
 
-    public ClassInfo(ClassInfoLoader loader, ParameterizedType type, int access, ParameterizedType superClass, Iterable<ParameterizedType> interfaces, Iterable<MethodNode> methods)
+    public ClassInfo(ClassInfoLoader loader, ParameterizedType type, int access, ParameterizedType superClass, Iterable<ParameterizedType> interfaces)
     {
         requireNonNull(loader, "loader is null");
         requireNonNull(type, "type is null");
@@ -100,12 +95,12 @@ public class ClassInfo
         this.access = access;
         this.superClass = superClass;
         this.interfaces = ImmutableList.copyOf(interfaces);
-        if (methods != null) {
-            this.methods = ImmutableList.copyOf(methods);
-        }
-        else {
-            this.methods = null;
-        }
+    }
+
+    private static int classAccessModifier(ClassDefinition classDefinition)
+    {
+        int accessModifier = toAccessModifier(classDefinition.getAccess());
+        return classDefinition.isInterface() ? accessModifier : accessModifier | ACC_SUPER;
     }
 
     public ParameterizedType getType()
@@ -136,12 +131,6 @@ public class ClassInfo
             builder.add(loader.loadClassInfo(anInterface));
         }
         return builder.build();
-    }
-
-    public List<MethodNode> getMethods()
-    {
-        checkState(methods != null, "Methods were not loaded for type %s", type);
-        return methods;
     }
 
     boolean isInterface()

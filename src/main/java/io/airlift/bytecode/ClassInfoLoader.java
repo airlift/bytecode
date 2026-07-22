@@ -45,7 +45,6 @@ package io.airlift.bytecode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.tree.ClassNode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,31 +60,26 @@ public class ClassInfoLoader
 {
     public static ClassInfoLoader createClassInfoLoader(ClassDefinition classDefinition, Lookup lookup)
     {
-        ClassNode classNode = new ClassNode();
-        classDefinition.visit(classNode);
-
-        return new ClassInfoLoader(ImmutableMap.of(classDefinition.getType(), classNode), ImmutableMap.of(), new LookupLoader(lookup));
+        return new ClassInfoLoader(ImmutableMap.of(classDefinition.getType(), classDefinition), ImmutableMap.of(), new LookupLoader(lookup));
     }
 
     public static ClassInfoLoader createClassInfoLoader(Iterable<ClassDefinition> classDefinitions, ClassLoader classLoader)
     {
-        ImmutableMap.Builder<ParameterizedType, ClassNode> classNodes = ImmutableMap.builder();
+        ImmutableMap.Builder<ParameterizedType, ClassDefinition> definitions = ImmutableMap.builder();
         for (ClassDefinition classDefinition : classDefinitions) {
-            ClassNode classNode = new ClassNode();
-            classDefinition.visit(classNode);
-            classNodes.put(classDefinition.getType(), classNode);
+            definitions.put(classDefinition.getType(), classDefinition);
         }
-        return new ClassInfoLoader(classNodes.build(), ImmutableMap.of(), new ClassLoaderLoader(classLoader));
+        return new ClassInfoLoader(definitions.build(), ImmutableMap.of(), new ClassLoaderLoader(classLoader));
     }
 
-    private final Map<ParameterizedType, ClassNode> classNodes;
+    private final Map<ParameterizedType, ClassDefinition> classDefinitions;
     private final Map<ParameterizedType, byte[]> bytecodes;
     private final Loader loader;
     private final Map<ParameterizedType, ClassInfo> classInfoCache = new HashMap<>();
 
-    private ClassInfoLoader(Map<ParameterizedType, ClassNode> classNodes, Map<ParameterizedType, byte[]> bytecodes, Loader loader)
+    private ClassInfoLoader(Map<ParameterizedType, ClassDefinition> classDefinitions, Map<ParameterizedType, byte[]> bytecodes, Loader loader)
     {
-        this.classNodes = ImmutableMap.copyOf(classNodes);
+        this.classDefinitions = ImmutableMap.copyOf(classDefinitions);
         this.bytecodes = ImmutableMap.copyOf(bytecodes);
         this.loader = loader;
     }
@@ -102,10 +96,10 @@ public class ClassInfoLoader
 
     private ClassInfo readClassInfoQuick(ParameterizedType type)
     {
-        // check for user supplied class node
-        ClassNode classNode = classNodes.get(type);
-        if (classNode != null) {
-            return new ClassInfo(this, classNode);
+        // check for user supplied class definition
+        ClassDefinition classDefinition = classDefinitions.get(type);
+        if (classDefinition != null) {
+            return new ClassInfo(this, classDefinition);
         }
 
         // check for user supplied byte code
@@ -150,7 +144,7 @@ public class ClassInfoLoader
             interfaces.add(typeFromPathName(classReader.readClass(header, buf)));
             header += 2;
         }
-        return new ClassInfo(this, type, access, superClass, interfaces.build(), null);
+        return new ClassInfo(this, type, access, superClass, interfaces.build());
     }
 
     private interface Loader
