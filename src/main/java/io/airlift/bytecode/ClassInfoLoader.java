@@ -60,7 +60,7 @@ public class ClassInfoLoader
 {
     public static ClassInfoLoader createClassInfoLoader(ClassDefinition classDefinition, Lookup lookup)
     {
-        return new ClassInfoLoader(ImmutableMap.of(classDefinition.getType(), classDefinition), ImmutableMap.of(), new LookupLoader(lookup));
+        return new ClassInfoLoader(ImmutableMap.of(classDefinition.getType(), classDefinition), new LookupLoader(lookup));
     }
 
     public static ClassInfoLoader createClassInfoLoader(Iterable<ClassDefinition> classDefinitions, ClassLoader classLoader)
@@ -69,18 +69,16 @@ public class ClassInfoLoader
         for (ClassDefinition classDefinition : classDefinitions) {
             definitions.put(classDefinition.getType(), classDefinition);
         }
-        return new ClassInfoLoader(definitions.build(), ImmutableMap.of(), new ClassLoaderLoader(classLoader));
+        return new ClassInfoLoader(definitions.build(), new ClassLoaderLoader(classLoader));
     }
 
     private final Map<ParameterizedType, ClassDefinition> classDefinitions;
-    private final Map<ParameterizedType, byte[]> bytecodes;
     private final Loader loader;
     private final Map<ParameterizedType, ClassInfo> classInfoCache = new HashMap<>();
 
-    private ClassInfoLoader(Map<ParameterizedType, ClassDefinition> classDefinitions, Map<ParameterizedType, byte[]> bytecodes, Loader loader)
+    private ClassInfoLoader(Map<ParameterizedType, ClassDefinition> classDefinitions, Loader loader)
     {
         this.classDefinitions = ImmutableMap.copyOf(classDefinitions);
-        this.bytecodes = ImmutableMap.copyOf(bytecodes);
         this.loader = loader;
     }
 
@@ -102,27 +100,19 @@ public class ClassInfoLoader
             return new ClassInfo(this, classDefinition);
         }
 
-        // check for user supplied byte code
-        ClassReader classReader;
-        byte[] bytecode = bytecodes.get(type);
-        if (bytecode != null) {
-            classReader = new ClassReader(bytecode);
+        // resolve through the loader first: already loaded classes are a cheap
+        // lookup, while reading the class file parses the whole constant pool
+        Optional<Class<?>> clazz = loader.tryLoadClass(type);
+        if (clazz.isPresent()) {
+            return new ClassInfo(this, clazz.orElseThrow());
         }
-        else {
-            // resolve through the loader first: already loaded classes are a cheap
-            // lookup, while reading the class file parses the whole constant pool
-            Optional<Class<?>> clazz = loader.tryLoadClass(type);
-            if (clazz.isPresent()) {
-                return new ClassInfo(this, clazz.orElseThrow());
-            }
 
-            // fall back to reading the class file
-            classReader = loader.createByteCodeClassReader(type)
-                    .orElse(null);
-            if (classReader == null) {
-                // load class directly to throw a descriptive exception
-                return new ClassInfo(this, loader.loadClass(type));
-            }
+        // fall back to reading the class file
+        ClassReader classReader = loader.createByteCodeClassReader(type)
+                .orElse(null);
+        if (classReader == null) {
+            // load class directly to throw a descriptive exception
+            return new ClassInfo(this, loader.loadClass(type));
         }
 
         // only the header is needed: computing common superclasses for frames
