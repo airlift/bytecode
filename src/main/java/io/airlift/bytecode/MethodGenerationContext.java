@@ -77,7 +77,10 @@ public class MethodGenerationContext
             new LocalVariableNode(variable, scopeContext.getStartLabel(), scopeContext.getEndLabel()).accept(methodVisitor, this);
         }
 
-        variableSlots.keySet().removeAll(scopeContext.getVariables());
+        // removeAll on the key set would scan the variable list for every mapping
+        for (Variable variable : scopeContext.getVariables()) {
+            variableSlots.remove(variable);
+        }
     }
 
     public int getVariableSlot(Variable variable)

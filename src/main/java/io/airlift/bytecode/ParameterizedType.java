@@ -14,13 +14,11 @@
 package io.airlift.bytecode;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.Immutable;
 import jakarta.annotation.Nullable;
 import org.objectweb.asm.Type;
 
 import java.util.List;
-import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -28,36 +26,17 @@ import static java.util.Objects.requireNonNull;
 @Immutable
 public class ParameterizedType
 {
-    private static final Map<Class<?>, ParameterizedType> COMMON_TYPES;
-
-    static {
-        ImmutableMap.Builder<Class<?>, ParameterizedType> builder = ImmutableMap.builder();
-        for (Class<?> clazz : ImmutableList.of(
-                void.class,
-                boolean.class,
-                byte.class,
-                char.class,
-                short.class,
-                int.class,
-                long.class,
-                float.class,
-                double.class,
-                Void.class,
-                Boolean.class,
-                Byte.class,
-                Character.class,
-                Short.class,
-                Integer.class,
-                Long.class,
-                Float.class,
-                Double.class,
-                Object.class,
-                String.class,
-                Number.class)) {
-            builder.put(clazz, new ParameterizedType(clazz));
+    // Raw types are immutable and are looked up repeatedly while generating a class, so they
+    // are cached per class. ClassValue ties each entry to the lifetime of its class, which
+    // keeps generated classes collectable.
+    private static final ClassValue<ParameterizedType> RAW_TYPES = new ClassValue<>()
+    {
+        @Override
+        protected ParameterizedType computeValue(Class<?> type)
+        {
+            return new ParameterizedType(type);
         }
-        COMMON_TYPES = builder.buildOrThrow();
-    }
+    };
 
     public static ParameterizedType typeFromJavaClassName(String className)
     {
@@ -80,11 +59,7 @@ public class ParameterizedType
     public static ParameterizedType type(Class<?> type)
     {
         requireNonNull(type, "type is null");
-        ParameterizedType commonType = COMMON_TYPES.get(type);
-        if (commonType != null) {
-            return commonType;
-        }
-        return new ParameterizedType(type);
+        return RAW_TYPES.get(type);
     }
 
     public static ParameterizedType type(Class<?> type, Class<?>... parameters)
